@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lotus CRM v2.3 - Đồng Bộ Thông Minh</title>
+    <title>Lotus CRM v2.4 - Siêu Kết Nối</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -71,7 +71,7 @@
 </head>
 <body>
     <div class="app-header">
-        <div class="logo"><i class="fa-solid fa-leaf"></i> <span>Lotus CRM <span class="status-tag">Đồng Bộ v2.3</span></span></div>
+        <div class="logo"><i class="fa-solid fa-leaf"></i> <span>Lotus CRM <span class="status-tag">Kết Nối v2.4</span></span></div>
         <div class="header-actions">
             <button class="btn btn-sync" id="sync-btn" onclick="syncOnline()"><i class="fa-solid fa-cloud-arrow-up"></i> Cập nhật Online</button>
             <button class="btn btn-outline" onclick="openDashboard()"><i class="fa-solid fa-chart-pie"></i></button>
@@ -130,7 +130,20 @@
         }
 
         function syncOnline() {
-            if (!window.supabase) { alert('Chưa kết nối được mạng!'); return; }
+            var btn = document.getElementById('sync-btn');
+            var oldHtml = btn.innerHTML;
+
+            // Nếu chưa có thư viện, thử nạp lại
+            if (!window.supabase) {
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang kết nối...';
+                var s = document.createElement('script');
+                s.src = "https://unpkg.com/@supabase/supabase-js@2";
+                s.onload = function() { syncOnline(); }; // Thử lại sau khi nạp xong
+                s.onerror = function() { alert('Không thể kết nối máy chủ dữ liệu. Vui lòng kiểm tra internet!'); btn.innerHTML = oldHtml; };
+                document.head.appendChild(s);
+                return;
+            }
+
             if (!supabase) supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             document.getElementById('sync-modal').classList.add('active');
             document.getElementById('sync-loading').classList.remove('hidden');
