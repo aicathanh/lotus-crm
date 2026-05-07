@@ -3,80 +3,169 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lotus CRM - Bản Chính Thức</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>Lotus CRM - Professional v1.1</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
     <style>
-        .modal-overlay { display: none !important; }
-        .modal-overlay.active { display: flex !important; opacity: 1 !important; pointer-events: auto !important; }
-        .app-header { z-index: 10000 !important; position: relative !important; }
-        #debug-tag { background: var(--primary) !important; color: #FFFFFF !important; }
-        .magic-paste-area { width: 100%; height: 100px; padding: 12px; border: 2px dashed var(--primary); border-radius: 8px; font-size: 13px; margin-top: 10px; background: #F0FDFA; transition: all 0.3s; }
-        .magic-paste-area:focus { border-style: solid; outline: none; background: #FFF; }
-        .error-detail { margin-top: 10px; font-family: monospace; font-size: 11px; padding: 10px; background: #FFF1F2; border: 1px solid #FDA4AF; color: #9F1239; border-radius: 4px; white-space: pre-wrap; word-break: break-all; }
+        :root {
+            --bg: #F8FAFC;
+            --card-bg: #FFFFFF;
+            --text-main: #1E293B;
+            --text-sub: #64748B;
+            --primary: #0F172A;
+            
+            /* Column Colors */
+            --col-quote: #3B82F6;     /* Blue */
+            --col-confirm: #F59E0B;   /* Amber */
+            --col-deliver: #8B5CF6;   /* Violet */
+            --col-paid: #10B981;      /* Emerald */
+            --col-debt: #EF4444;      /* Rose */
+            --col-completed: #64748B; /* Slate */
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg); color: var(--text-main); overflow-x: auto; }
+
+        .app-header { 
+            height: 70px; background: #FFF; border-bottom: 1px solid #E2E8F0; 
+            display: flex; align-items: center; justify-content: space-between; padding: 0 24px;
+            position: sticky; top: 0; z-index: 100;
+        }
+        .logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 20px; color: var(--primary); }
+        .logo i { color: #10B981; }
+
+        .header-actions { display: flex; gap: 12px; }
+        .btn { 
+            padding: 10px 18px; border-radius: 10px; font-weight: 600; font-size: 14px; 
+            cursor: pointer; border: none; display: flex; align-items: center; gap: 8px; transition: all 0.2s;
+        }
+        .btn-primary { background: var(--primary); color: #FFF; }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .btn-outline { background: #FFF; border: 1.5px solid #E2E8F0; color: var(--text-main); }
+
+        .board { display: flex; padding: 20px; gap: 20px; min-height: calc(100vh - 70px); align-items: flex-start; }
+        .column { 
+            flex-shrink: 0; width: 300px; background: #EDF2F7; border-radius: 16px; 
+            padding: 12px; display: flex; flex-direction: column; max-height: calc(100vh - 110px);
+        }
+        
+        /* Column Specific Styling */
+        .column[data-status="quote"] { background: #EFF6FF; border: 1px solid #DBEAFE; }
+        .column[data-status="confirm"] { background: #FFFBEB; border: 1px solid #FEF3C7; }
+        .column[data-status="deliver"] { background: #F5F3FF; border: 1px solid #EDE9FE; }
+        .column[data-status="paid"] { background: #ECFDF5; border: 1px solid #D1FAE5; }
+        .column[data-status="debt"] { background: #FEF2F2; border: 1px solid #FEE2E2; }
+        .column[data-status="completed"] { background: #F8FAFC; border: 1px solid #F1F5F9; }
+
+        .column-header { margin-bottom: 15px; padding: 4px 8px; }
+        .column-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+        .column-title span:first-child { font-weight: 700; font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .col-count { background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .col-total { font-weight: 800; font-size: 18px; color: var(--primary); }
+
+        /* Card Styling - The Main focus */
+        .column-body { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; flex-grow: 1; padding-bottom: 20px; }
+        .card { 
+            background: #FFF; border-radius: 14px; padding: 16px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04); cursor: grab; transition: all 0.2s;
+            border: 1px solid transparent; position: relative;
+        }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(0,0,0,0.08); border-color: #CBD5E1; }
+        .card.dragging { opacity: 0.5; transform: scale(0.95); }
+
+        .card-price { font-size: 20px; font-weight: 800; color: var(--primary); margin-bottom: 4px; display: block; }
+        .card-name { font-size: 15px; font-weight: 600; color: var(--text-main); margin-bottom: 12px; display: block; }
+        .card-footer { 
+            display: flex; align-items: center; justify-content: space-between; 
+            border-top: 1px solid #F1F5F9; padding-top: 10px; margin-top: 10px;
+        }
+        .card-date { font-size: 11px; color: var(--text-sub); font-weight: 500; }
+        .btn-delete { color: #FDA4AF; border: none; background: none; cursor: pointer; padding: 4px; border-radius: 4px; }
+        .btn-delete:hover { color: #EF4444; background: #FEF2F2; }
+
+        /* Column Colors for Price/Title */
+        .column[data-status="quote"] .column-title span:first-child { color: var(--col-quote); }
+        .column[data-status="confirm"] .column-title span:first-child { color: var(--col-confirm); }
+        .column[data-status="deliver"] .column-title span:first-child { color: var(--col-deliver); }
+        .column[data-status="paid"] .column-title span:first-child { color: var(--col-paid); }
+        .column[data-status="debt"] .column-title span:first-child { color: var(--col-debt); }
+        .column[data-status="completed"] .column-title span:first-child { color: var(--col-completed); }
+
+        /* Modals */
+        .modal-overlay { 
+            position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
+            display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal { background: #FFF; width: 100%; max-width: 500px; border-radius: 24px; padding: 32px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
+        .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+        .modal-header h3 { font-size: 20px; font-weight: 800; }
+        .close-btn { background: #F1F5F9; border: none; width: 36px; height: 36px; border-radius: 10px; cursor: pointer; }
+
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; color: var(--text-sub); }
+        .form-group input, .form-group textarea { 
+            width: 100%; padding: 12px 16px; border-radius: 12px; border: 2px solid #F1F5F9; 
+            font-size: 15px; transition: all 0.2s; font-weight: 500;
+        }
+        .form-group input:focus { border-color: var(--col-quote); outline: none; background: #FFF; }
+        
+        .magic-paste-area { height: 120px; border-style: dashed; background: #F8FAFC; resize: none; }
+        
+        .scan-loader { text-align: center; padding: 40px 0; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #F1F5F9; border-top-color: var(--col-quote); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .hidden { display: none; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-    <div id="debug-tag" style="position:fixed; top:0; left:0; font-size:10px; padding:2px 8px; z-index:10001; border-radius: 0 0 4px 0; font-weight:bold;">v1.0 - Bản Chính Thức</div>
-
-    <div class="app-container">
-        <header class="app-header">
-            <div class="logo"><i class="fa-solid fa-leaf"></i> <span>Lotus CRM</span></div>
-            <div class="header-filters"><div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="search-input" oninput="renderBoard()" placeholder="Tìm kiếm tên khách, SĐT..."></div></div>
-            <div class="header-actions">
-                <button class="btn btn-outline" onclick="openSettings()" title="Cài đặt"><i class="fa-solid fa-gear"></i></button>
-                <button class="btn btn-primary" onclick="openUpload()"><i class="fa-solid fa-cloud-arrow-up"></i> Tải Báo Giá</button>
-            </div>
-        </header>
-
-        <main class="board" id="board">
-            <div class="column" data-status="quote"><div class="column-header" style="border-top-color: var(--tag-quote)"><div class="column-header-top"><span>Báo Giá</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-quote"></div></div>
-            <div class="column" data-status="confirm"><div class="column-header" style="border-top-color: var(--tag-confirm)"><div class="column-header-top"><span>Chốt Đơn</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-confirm"></div></div>
-            <div class="column" data-status="deliver"><div class="column-header" style="border-top-color: var(--tag-deliver)"><div class="column-header-top"><span>Đã Giao</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-deliver"></div></div>
-            <div class="column" data-status="paid"><div class="column-header" style="border-top-color: var(--tag-paid)"><div class="column-header-top"><span>Đã Thu Tiền</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-paid"></div></div>
-            <div class="column" data-status="debt"><div class="column-header" style="border-top-color: var(--tag-debt)"><div class="column-header-top"><span>Công Nợ</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-debt"></div></div>
-            <div class="column" data-status="completed"><div class="column-header" style="border-top-color: #0F766E"><div class="column-header-top"><span>Hoàn Tất</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-completed"></div></div>
-        </main>
+    <div class="app-header">
+        <div class="logo"><i class="fa-solid fa-leaf"></i> <span>Lotus CRM</span></div>
+        <div class="header-actions">
+            <button class="btn btn-outline" onclick="openSettings()"><i class="fa-solid fa-gear"></i></button>
+            <button class="btn btn-primary" onclick="openUpload()"><i class="fa-solid fa-cloud-arrow-up"></i> Tải Báo Giá</button>
+        </div>
     </div>
 
+    <main class="board" id="board">
+        <div class="column" data-status="quote"><div class="column-header"><div class="column-title"><span>Báo Giá</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-quote"></div></div>
+        <div class="column" data-status="confirm"><div class="column-header"><div class="column-title"><span>Chốt Đơn</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-confirm"></div></div>
+        <div class="column" data-status="deliver"><div class="column-header"><div class="column-title"><span>Đã Giao</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-deliver"></div></div>
+        <div class="column" data-status="paid"><div class="column-header"><div class="column-title"><span>Đã Thu Tiền</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-paid"></div></div>
+        <div class="column" data-status="debt"><div class="column-header"><div class="column-title"><span>Công Nợ</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-debt"></div></div>
+        <div class="column" data-status="completed"><div class="column-header"><div class="column-title"><span>Hoàn Tất</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-completed"></div></div>
+    </main>
+
     <!-- Modals -->
-    <div class="modal-overlay" id="settings-modal"><div class="modal"><div class="modal-header"><h3>Cấu hình Hệ thống</h3><button class="close-btn" onclick="closeAll()"><i class="fa-solid fa-xmark"></i></button></div><div class="modal-body">
-        <div class="form-group"><label>Google Gemini API Key</label><input type="password" id="apiKeyInput" placeholder="Dán mã API của bạn vào đây..."></div>
-        <p style="font-size:11px; color:#666; margin-top:5px;">Lưu ý: Sử dụng API Key từ một Project mới trong AI Studio để có hiệu suất tốt nhất.</p>
-        <div class="form-actions" style="margin-top:15px;"><button class="btn btn-primary" onclick="saveKey()">Lưu Cấu Hình</button></div>
+    <div class="modal-overlay" id="settings-modal"><div class="modal"><div class="modal-header"><h3>Cài đặt AI</h3><button class="close-btn" onclick="closeAll()"><i class="fa-solid fa-xmark"></i></button></div><div class="modal-body">
+        <div class="form-group"><label>Gemini API Key</label><input type="password" id="apiKeyInput" placeholder="Dán mã API..."></div>
+        <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="saveKey()">Lưu Cấu Hình</button>
     </div></div></div>
-    
-    <div class="modal-overlay" id="upload-modal"><div class="modal"><div class="modal-header"><h3>Tải Lên Báo Giá</h3><button class="close-btn" onclick="closeAll()"><i class="fa-solid fa-xmark"></i></button></div><div class="modal-body">
+
+    <div class="modal-overlay" id="upload-modal"><div class="modal"><div class="modal-header"><h3>Tải Báo Giá</h3><button class="close-btn" onclick="closeAll()"><i class="fa-solid fa-xmark"></i></button></div><div class="modal-body">
         <div id="upload-main-area">
-            <div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()">
+            <div class="form-group" style="border: 2px dashed #E2E8F0; padding: 30px; border-radius: 16px; text-align: center; cursor: pointer;" onclick="document.getElementById('file-input').click()">
                 <input type="file" id="file-input" accept="image/*" hidden onchange="handleFile(this.files[0])">
-                <i class="fa-regular fa-image upload-icon"></i>
-                <p>Nhấn để chọn ảnh báo giá hoặc kéo thả vào đây</p>
+                <i class="fa-regular fa-image" style="font-size: 40px; color: var(--col-quote); margin-bottom: 12px;"></i>
+                <p style="font-weight: 600;">Chọn ảnh báo giá</p>
             </div>
-            <div style="text-align: center; margin-top:15px;">
-                <p style="font-size:13px; font-weight:600; color:var(--primary); margin-bottom:10px;">Hoặc Dán Văn Bản Từ Ảnh</p>
-                <textarea class="magic-paste-area" id="magic-paste" placeholder="Copy nội dung chữ từ ảnh báo giá và dán vào đây để AI tự động điền đơn hàng..." oninput="handleMagicPaste(this.value)"></textarea>
+            <div class="form-group">
+                <label>Hoặc dán văn bản từ ảnh</label>
+                <textarea class="magic-paste-area" id="magic-paste" placeholder="Dán nội dung chữ vào đây..." oninput="handleMagicPaste(this.value)"></textarea>
             </div>
         </div>
-        <div id="scan-loader" class="scan-loader hidden"><div class="spinner"></div><p id="scan-status">AI đang phân tích dữ liệu báo giá...</p></div>
+        <div id="scan-loader" class="scan-loader hidden"><div class="spinner"></div><p id="scan-status">Đang phân tích...</p></div>
         <div id="error-box" class="hidden">
-            <div class="error-detail" id="error-msg"></div>
-            <div style="text-align: center; margin-top: 15px;">
-                <button class="btn btn-primary" onclick="openUpload()">Thử Lại Hoặc Dán Văn Bản</button>
-                <button class="btn btn-outline" onclick="openManualForm()" style="margin-top:10px; width:100%;">Nhập Thủ Công</button>
-            </div>
+            <div class="error-detail" id="error-msg" style="margin-bottom:15px;"></div>
+            <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="openUpload()">Thử Lại</button>
         </div>
         <form id="order-form" class="hidden" onsubmit="saveOrder(event)">
-            <div class="form-grid">
-                <div class="form-group"><label>Tên Khách Hàng</label><input type="text" id="customerName" required></div>
-                <div class="form-group"><label>Số Điện Thoại</label><input type="text" id="phone"></div>
-                <div class="form-group full-width"><label>Địa Chỉ Giao Hàng</label><input type="text" id="address"></div>
-                <div class="form-group"><label>Số Báo Giá / Mã Đơn</label><input type="text" id="quoteNumber"></div>
-                <div class="form-group"><label>Tổng Tiền (VNĐ)</label><input type="text" id="amount" required></div>
-            </div>
-            <div class="form-actions"><button type="button" class="btn btn-outline" onclick="closeAll()">Hủy</button><button type="submit" class="btn btn-primary">Lưu Đơn Hàng</button></div>
+            <div class="form-group"><label>Số Tiền (Quan trọng nhất)</label><input type="text" id="amount" style="font-size: 24px; font-weight: 800; color: var(--col-paid);" required></div>
+            <div class="form-group"><label>Tên Khách Hàng</label><input type="text" id="customerName" required></div>
+            <div class="form-group"><label>SĐT</label><input type="text" id="phone"></div>
+            <div class="form-group"><label>Địa Chỉ</label><input type="text" id="address"></div>
+            <div class="form-actions" style="display:flex; gap:10px; margin-top:20px;"><button type="button" class="btn btn-outline" style="flex:1; justify-content:center;" onclick="closeAll()">Hủy</button><button type="submit" class="btn btn-primary" style="flex:2; justify-content:center;">Lưu Đơn</button></div>
         </form>
     </div></div></div>
 
@@ -89,23 +178,21 @@
         function closeAll() { var ms = document.querySelectorAll('.modal-overlay'); for(var i=0; i<ms.length; i++) ms[i].classList.remove('active'); }
         function openSettings() { document.getElementById('apiKeyInput').value = localStorage.getItem('lotus_gemini_key') || ''; document.getElementById('settings-modal').classList.add('active'); }
         function openUpload() { document.getElementById('upload-modal').classList.add('active'); document.getElementById('upload-main-area').classList.remove('hidden'); document.getElementById('order-form').classList.add('hidden'); document.getElementById('scan-loader').classList.add('hidden'); document.getElementById('error-box').classList.add('hidden'); document.getElementById('magic-paste').value = ''; }
-        function openManualForm() { document.getElementById('upload-main-area').classList.add('hidden'); document.getElementById('scan-loader').classList.add('hidden'); document.getElementById('error-box').classList.add('hidden'); document.getElementById('order-form').classList.remove('hidden'); document.getElementById('order-form').reset(); }
-        function saveKey() { localStorage.setItem('lotus_gemini_key', document.getElementById('apiKeyInput').value.trim()); alert('Đã lưu cấu hình AI!'); closeAll(); }
+        function saveKey() { localStorage.setItem('lotus_gemini_key', document.getElementById('apiKeyInput').value.trim()); alert('Đã lưu!'); closeAll(); }
         function saveLocal() { localStorage.setItem('lotus_crm_cards', JSON.stringify(cards)); }
 
         function renderBoard() {
-            var search = (document.getElementById('search-input').value || '').toLowerCase();
             var states = ['quote', 'confirm', 'deliver', 'paid', 'debt', 'completed'];
             states.forEach(function(st) {
                 var b = document.getElementById('col-' + st); if (!b) return; b.innerHTML = '';
                 var list = cards.filter(function(c) { return c.status === st; });
-                if (search) list = list.filter(function(c) { return (c.customerName || '').toLowerCase().indexOf(search) > -1 || (c.phone || '').indexOf(search) > -1 || (c.quoteNumber || '').toLowerCase().indexOf(search) > -1; });
                 var h = b.parentElement; var sum = 0; list.forEach(function(item) { sum += (Number(item.amount) || 0); });
                 h.querySelector('.col-count').textContent = list.length; h.querySelector('.col-total').textContent = new Intl.NumberFormat('vi-VN').format(sum) + ' đ';
                 list.forEach(function(c) {
                     var d = document.createElement('div'); d.className = 'card'; d.draggable = true; d.setAttribute('data-id', c.id);
-                    d.innerHTML = '<div class="card-header"><span class="card-quote">#' + (c.quoteNumber || '---') + '</span><span>' + new Date(c.date).toLocaleDateString('vi-VN') + '</span></div>' +
-                                  '<div class="card-customer">' + c.customerName + '</div><div class="card-footer"><div>' + Number(c.amount).toLocaleString() + ' đ</div>' +
+                    d.innerHTML = '<span class="card-price">' + Number(c.amount).toLocaleString() + ' đ</span>' +
+                                  '<span class="card-name">' + c.customerName + '</span>' +
+                                  '<div class="card-footer"><span class="card-date">' + new Date(c.date).toLocaleDateString('vi-VN') + '</span>' +
                                   '<button class="btn-delete" onclick="deleteCard(\'' + c.id + '\')"><i class="fa-solid fa-trash"></i></button></div>';
                     d.ondragstart = function() { d.classList.add('dragging'); }; d.ondragend = function() { d.classList.remove('dragging'); }; b.appendChild(d);
                 });
@@ -140,22 +227,16 @@
 
         function callAI(data, isImage) {
             var key = (localStorage.getItem('lotus_gemini_key') || '').trim();
-            
             fetch('https://generativelanguage.googleapis.com/v1beta/models?key=' + key)
             .then(function(res) { return res.json(); })
             .then(function(d) {
                 var models = d.models || [];
                 var targetModel = null;
-                if (isImage) {
-                    for(var i=0; i<models.length; i++) if (models[i].name.indexOf('1.5-flash') > -1) { targetModel = models[i].name; break; }
-                } else {
-                    for(var i=0; i<models.length; i++) if (models[i].name.indexOf('pro') > -1) { targetModel = models[i].name; break; }
-                }
+                if (isImage) { for(var i=0; i<models.length; i++) if (models[i].name.indexOf('1.5-flash') > -1) { targetModel = models[i].name; break; } }
+                else { for(var i=0; i<models.length; i++) if (models[i].name.indexOf('pro') > -1) { targetModel = models[i].name; break; } }
                 if (!targetModel) targetModel = isImage ? 'models/gemini-1.5-flash' : 'models/gemini-pro';
-                
                 var part = isImage ? { inlineData: { mimeType: "image/jpeg", data: data } } : { text: data };
-                var body = { contents: [{ parts: [{ text: "Extract JSON: customerName, phone, address, quoteNumber, amount" }, part] }], safetySettings: [{ category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" }, { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" }, { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" }, { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }] };
-                
+                var body = { contents: [{ parts: [{ text: "Extract JSON: customerName, phone, address, amount (number only)" }, part] }], safetySettings: [{ category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" }, { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" }, { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" }, { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }] };
                 return fetch('https://generativelanguage.googleapis.com/v1beta/' + targetModel + ':generateContent?key=' + key, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
             })
             .then(function(res) { return res.json().then(function(d) { if (!res.ok) throw new Error(JSON.stringify(d.error || d)); return d; }); })
@@ -167,28 +248,25 @@
                 document.getElementById('customerName').value = json.customerName || '';
                 document.getElementById('phone').value = json.phone || '';
                 document.getElementById('address').value = json.address || '';
-                document.getElementById('quoteNumber').value = json.quoteNumber || '';
                 document.getElementById('amount').value = String(json.amount || '').replace(/[^0-9]/g, '') || '';
             }).catch(function(err) {
                 document.getElementById('scan-loader').classList.add('hidden');
                 document.getElementById('error-box').classList.remove('hidden');
-                var msg = "LỖI: ";
-                try { var e = JSON.parse(err.message); msg += e.message; } catch(x) { msg += err.message; }
-                document.getElementById('error-msg').textContent = msg;
+                document.getElementById('error-msg').textContent = err.message;
             });
         }
 
         function saveOrder(e) {
             e.preventDefault();
-            var c = { id: Date.now().toString(), customerName: document.getElementById('customerName').value, phone: document.getElementById('phone').value, address: document.getElementById('address').value, quoteNumber: document.getElementById('quoteNumber').value, amount: parseInt(document.getElementById('amount').value) || 0, status: 'quote', date: new Date().toISOString() };
+            var c = { id: Date.now().toString(), customerName: document.getElementById('customerName').value, phone: document.getElementById('phone').value, address: document.getElementById('address').value, amount: parseInt(document.getElementById('amount').value) || 0, status: 'quote', date: new Date().toISOString() };
             cards.unshift(c); saveLocal(); renderBoard(); closeAll();
-            if (supabase) supabase.from('orders').upsert({ id: c.id, customerName: c.customerName, phone: c.phone, address: c.address, quoteNumber: c.quoteNumber, amount: String(c.amount), status: c.status }).then(function(){});
+            if (supabase) supabase.from('orders').upsert({ id: c.id, customerName: c.customerName, phone: c.phone, address: c.address, amount: String(c.amount), status: c.status }).then(function(){});
         }
 
         function deleteCard(id) { if (confirm('Xoá?')) { cards = cards.filter(function(x) { return x.id !== id; }); saveLocal(); renderBoard(); if (supabase) supabase.from('orders').delete().eq('id', id).then(function(){}); } }
 
         renderBoard();
-        setTimeout(function() { if (window.supabase) { supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); supabase.from('orders').select('*').order('created_at', { ascending: false }).then(function(res) { if (res.data && res.data.length > 0) { cards = res.data.map(function(d) { return { id: d.id, customerName: d.customerName, phone: d.phone, address: d.address, quoteNumber: d.quoteNumber, amount: parseInt(d.amount) || 0, status: d.status, date: d.created_at }; }); renderBoard(); saveLocal(); } }); } }, 500);
+        setTimeout(function() { if (window.supabase) { supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); supabase.from('orders').select('*').order('created_at', { ascending: false }).then(function(res) { if (res.data && res.data.length > 0) { cards = res.data.map(function(d) { return { id: d.id, customerName: d.customerName, phone: d.phone, address: d.address, amount: parseInt(d.amount) || 0, status: d.status, date: d.created_at }; }); renderBoard(); saveLocal(); } }); } }, 500);
     </script>
 </body>
 </html>
