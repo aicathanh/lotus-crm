@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lotus CRM v1.7 - Cache Buster</title>
+    <title>Lotus CRM v1.8 - Local First</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --bg: #F8FAFC; --card-bg: #FFFFFF; --text-main: #1E293B; --text-sub: #64748B; --primary: #0F172A;
+            --bg: #F1F5F9; --card-bg: #FFFFFF; --text-main: #0F172A; --text-sub: #64748B; --primary: #0F172A;
             --col-quote: #3B82F6; --col-confirm: #F59E0B; --col-deliver: #8B5CF6; --col-paid: #10B981; --col-debt: #EF4444; --col-completed: #64748B;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
@@ -17,77 +17,70 @@
         .app-header { height: 70px; background: #FFF; border-bottom: 1px solid #E2E8F0; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; position: sticky; top: 0; z-index: 100; }
         .logo { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 22px; color: var(--primary); }
         .logo i { color: #10B981; }
-        .version-tag { font-size: 10px; background: #F1F5F9; padding: 2px 6px; border-radius: 4px; margin-left: 8px; vertical-align: middle; }
+        .status-tag { font-size: 10px; background: #DCFCE7; color: #166534; padding: 2px 8px; border-radius: 20px; font-weight: 700; margin-left: 10px; text-transform: uppercase; }
 
-        .header-actions { display: flex; gap: 12px; }
-        .btn { padding: 10px 18px; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer; border: none; display: flex; align-items: center; gap: 8px; transition: all 0.2s; }
+        .header-actions { display: flex; gap: 10px; }
+        .btn { padding: 10px 16px; border-radius: 12px; font-weight: 600; font-size: 13px; cursor: pointer; border: none; display: flex; align-items: center; gap: 8px; transition: all 0.2s; }
         .btn-primary { background: var(--primary); color: #FFF; }
+        .btn-sync { background: #0369A1; color: #FFF; box-shadow: 0 4px 10px rgba(3, 105, 161, 0.2); }
+        .btn-sync:hover { background: #075985; transform: scale(1.02); }
         .btn-outline { background: #FFF; border: 1.5px solid #E2E8F0; color: var(--text-main); }
-        .btn-dashboard { background: #EEF2FF; color: #4338CA; border: 1.5px solid #E0E7FF; }
 
-        .board { display: flex; padding: 20px; gap: 20px; min-height: calc(100vh - 70px); align-items: flex-start; overflow-x: auto; }
-        .column { flex-shrink: 0; width: 320px; border-radius: 20px; padding: 16px; display: flex; flex-direction: column; max-height: calc(100vh - 110px); }
+        .board { display: flex; padding: 20px; gap: 16px; min-height: calc(100vh - 70px); align-items: flex-start; overflow-x: auto; }
+        .column { flex-shrink: 0; width: 310px; border-radius: 24px; padding: 16px; display: flex; flex-direction: column; max-height: calc(100vh - 110px); background: rgba(255,255,255,0.5); }
         
-        .column[data-status="quote"] { background: #EFF6FF; }
-        .column[data-status="confirm"] { background: #FFFBEB; }
-        .column[data-status="deliver"] { background: #F5F3FF; }
-        .column[data-status="paid"] { background: #ECFDF5; }
-        .column[data-status="debt"] { background: #FEF2F2; }
-        .column[data-status="completed"] { background: #F8FAFC; }
+        .column[data-status="quote"] { background: #EFF6FF; border: 1px solid #DBEAFE; }
+        .column[data-status="confirm"] { background: #FFFBEB; border: 1px solid #FEF3C7; }
+        .column[data-status="deliver"] { background: #F5F3FF; border: 1px solid #EDE9FE; }
+        .column[data-status="paid"] { background: #ECFDF5; border: 1px solid #D1FAE5; }
+        .column[data-status="debt"] { background: #FEF2F2; border: 1px solid #FEE2E2; }
+        .column[data-status="completed"] { background: #F8FAFC; border: 1px solid #F1F5F9; }
 
-        .column-header { margin-bottom: 20px; }
+        .column-header { margin-bottom: 16px; }
         .column-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
-        .column-title span:first-child { font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.7; }
-        .col-count { background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 700; }
-        .col-total { font-weight: 900; font-size: 26px; color: var(--primary); }
+        .column-title span:first-child { font-weight: 800; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.6; }
+        .col-count { background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; }
+        .col-total { font-weight: 900; font-size: 24px; color: var(--primary); letter-spacing: -0.5px; }
 
-        .column-body { display: flex; flex-direction: column; gap: 14px; overflow-y: auto; flex-grow: 1; padding-bottom: 20px; }
-        .card { background: #FFF; border-radius: 16px; padding: 18px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); cursor: grab; border: 1px solid transparent; transition: all 0.2s; }
-        .card:hover { transform: translateY(-3px); box-shadow: 0 12px 20px -5px rgba(0,0,0,0.1); border-color: #E2E8F0; }
+        .column-body { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; flex-grow: 1; padding-bottom: 20px; min-height: 100px; }
+        .card { background: #FFF; border-radius: 18px; padding: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); cursor: grab; border: 1px solid transparent; transition: all 0.2s; }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-color: #E2E8F0; }
         .card.dragging { opacity: 0.5; }
 
-        .card-price { font-size: 18px; font-weight: 800; color: var(--primary); margin-bottom: 4px; display: block; }
-        .card-name { font-size: 14px; font-weight: 600; color: var(--text-main); margin-bottom: 8px; display: block; line-height: 1.4; }
-        .card-footer { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #F1F5F9; padding-top: 12px; margin-top: 12px; }
-        .card-date { font-size: 11px; color: var(--text-sub); font-weight: 600; }
+        .card-price { font-size: 17px; font-weight: 800; color: var(--primary); margin-bottom: 2px; display: block; }
+        .card-name { font-size: 13px; font-weight: 600; color: var(--text-main); margin-bottom: 8px; display: block; line-height: 1.4; }
+        .card-footer { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #F1F5F9; padding-top: 10px; margin-top: 10px; }
+        .card-date { font-size: 10px; color: var(--text-sub); font-weight: 700; text-transform: uppercase; }
         .btn-delete { color: #FDA4AF; border: none; background: none; cursor: pointer; padding: 4px; }
 
-        /* Dashboard Styles */
-        .dashboard-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 24px; }
-        .stat-card { background: #F8FAFC; padding: 20px; border-radius: 16px; border: 1px solid #E2E8F0; }
-        .stat-label { font-size: 12px; font-weight: 700; color: var(--text-sub); text-transform: uppercase; margin-bottom: 8px; }
-        .stat-value { font-size: 28px; font-weight: 900; color: var(--primary); }
-
+        /* Dashboard & Modals */
         .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
         .modal-overlay.active { display: flex; }
-        .modal { background: #FFF; width: 100%; max-width: 600px; border-radius: 28px; padding: 32px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); max-height: 90vh; overflow-y: auto; }
+        .modal { background: #FFF; width: 100%; max-width: 550px; border-radius: 28px; padding: 32px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); max-height: 90vh; overflow-y: auto; }
         .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
-        .modal-header h3 { font-size: 22px; font-weight: 900; }
-        .close-btn { background: #F1F5F9; border: none; width: 40px; height: 40px; border-radius: 12px; cursor: pointer; }
-
-        .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; font-size: 13px; font-weight: 800; margin-bottom: 8px; color: var(--text-sub); text-transform: uppercase; }
-        .form-group input, .form-group textarea { width: 100%; padding: 14px 18px; border-radius: 14px; border: 2px solid #F1F5F9; font-size: 15px; font-weight: 500; transition: all 0.2s; }
-        .form-group input:focus { border-color: var(--col-quote); outline: none; background: #FFF; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 12px; font-weight: 800; margin-bottom: 6px; color: var(--text-sub); text-transform: uppercase; }
+        .form-group input, .form-group textarea { width: 100%; padding: 12px 16px; border-radius: 12px; border: 2px solid #F1F5F9; font-size: 14px; font-weight: 500; transition: all 0.2s; }
+        .form-group input:focus { border-color: var(--col-quote); outline: none; }
         .hidden { display: none; }
-        .scan-loader { text-align: center; padding: 40px 0; }
-        .spinner { width: 48px; height: 48px; border: 5px solid #F1F5F9; border-top-color: var(--col-quote); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+        .scan-loader { text-align: center; padding: 30px 0; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #F1F5F9; border-top-color: #0369A1; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <div class="app-header">
-        <div class="logo"><i class="fa-solid fa-leaf"></i> <span>Lotus CRM <span class="version-tag">v1.7</span></span></div>
+        <div class="logo"><i class="fa-solid fa-leaf"></i> <span>Lotus CRM <span class="status-tag">Local First v1.8</span></span></div>
         <div class="header-actions">
-            <button class="btn btn-dashboard" onclick="openDashboard()"><i class="fa-solid fa-chart-pie"></i> Thống kê</button>
+            <button class="btn btn-sync" id="sync-btn" onclick="syncOnline()"><i class="fa-solid fa-cloud-arrow-up"></i> Cập nhật Online</button>
+            <button class="btn btn-outline" onclick="openDashboard()"><i class="fa-solid fa-chart-pie"></i></button>
             <button class="btn btn-outline" onclick="openSettings()"><i class="fa-solid fa-gear"></i></button>
-            <button class="btn btn-primary" onclick="openUpload()"><i class="fa-solid fa-cloud-arrow-up"></i> Tải Báo Giá</button>
+            <button class="btn btn-primary" onclick="openUpload()"><i class="fa-solid fa-plus"></i></button>
         </div>
     </div>
 
     <main class="board" id="board">
-        <!-- Columns will be rendered by JS -->
         <div class="column" data-status="quote"><div class="column-header"><div class="column-title"><span>Báo Giá</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-quote"></div></div>
         <div class="column" data-status="confirm"><div class="column-header"><div class="column-title"><span>Chốt Đơn</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-confirm"></div></div>
         <div class="column" data-status="deliver"><div class="column-header"><div class="column-title"><span>Đã Giao</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-deliver"></div></div>
@@ -97,45 +90,15 @@
     </main>
 
     <!-- Modals -->
-    <div class="modal-overlay" id="dashboard-modal"><div class="modal"><div class="modal-header"><h3>Thống kê kinh doanh</h3><button class="close-btn" onclick="closeAll()"><i class="fa-solid fa-xmark"></i></button></div><div class="modal-body">
-        <div class="dashboard-grid">
-            <div class="stat-card"><div class="stat-label">Tổng doanh thu</div><div class="stat-value" id="dash-revenue">0 đ</div></div>
-            <div class="stat-card"><div class="stat-label">Tổng số đơn</div><div class="stat-value" id="dash-orders">0</div></div>
-        </div>
-        <h4 style="font-weight:800; margin-bottom:15px; font-size:16px;">Sản phẩm bán chạy nhất</h4>
-        <div class="product-list" id="dash-products"></div>
-    </div></div></div>
+    <div class="modal-overlay" id="sync-modal"><div class="modal" style="text-align:center;"><div id="sync-loading"><div class="spinner"></div><p style="font-weight:700;">Đang đồng bộ dữ liệu lên mây...</p></div><div id="sync-success" class="hidden"><i class="fa-solid fa-circle-check" style="font-size:48px; color:#10B981; margin-bottom:16px;"></i><p style="font-weight:700; margin-bottom:20px;">Đã cập nhật Online thành công!</p><button class="btn btn-primary" style="margin:0 auto;" onclick="closeAll()">Tuyệt vời</button></div></div></div>
 
-    <div class="modal-overlay" id="settings-modal"><div class="modal"><div class="modal-header"><h3>Cài đặt AI</h3><button class="close-btn" onclick="closeAll()"><i class="fa-solid fa-xmark"></i></button></div><div class="modal-body">
-        <div class="form-group"><label>Gemini API Key</label><input type="password" id="apiKeyInput" placeholder="Dán mã API..."></div>
-        <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="saveKey()">Lưu Cấu Hình</button>
-    </div></div></div>
+    <div class="modal-overlay" id="dashboard-modal"><div class="modal"><div class="modal-header"><h3>Thống kê</h3><button class="close-btn" onclick="closeAll()"><i class="fa-solid fa-xmark"></i></button></div><div class="modal-body"><div id="dash-content"></div></div></div></div>
+    <div class="modal-overlay" id="settings-modal"><div class="modal"><div class="modal-header"><h3>Cài đặt</h3><button class="close-btn" onclick="closeAll()"><i class="fa-solid fa-xmark"></i></button></div><div class="modal-body"><div class="form-group"><label>Gemini API Key</label><input type="password" id="apiKeyInput"></div><button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="saveKey()">Lưu</button></div></div></div>
 
     <div class="modal-overlay" id="upload-modal"><div class="modal"><div class="modal-header"><h3>Tải Báo Giá</h3><button class="close-btn" onclick="closeAll()"><i class="fa-solid fa-xmark"></i></button></div><div class="modal-body">
-        <div id="upload-main-area">
-            <div style="border: 2px dashed #E2E8F0; padding: 40px; border-radius: 20px; text-align: center; cursor: pointer; margin-bottom:20px;" onclick="document.getElementById('file-input').click()">
-                <input type="file" id="file-input" accept="image/*" hidden onchange="handleFile(this.files[0])">
-                <i class="fa-regular fa-image" style="font-size: 48px; color: var(--col-quote); margin-bottom: 16px;"></i>
-                <p style="font-weight: 700; font-size:16px;">Chọn ảnh báo giá</p>
-            </div>
-            <div class="form-group"><label>Dán văn bản (Nếu quét ảnh chậm)</label><textarea id="magic-paste" style="height:60px; resize:none;" placeholder="Dán chữ..." oninput="handleMagicPaste(this.value)"></textarea></div>
-        </div>
-        <div id="scan-loader" class="scan-loader hidden">
-            <div class="spinner"></div>
-            <p id="scan-status" style="font-weight:700; color:var(--primary); margin-bottom:10px;">Đang xử lý...</p>
-            <p style="font-size:12px; color:var(--text-sub); margin-bottom:20px;">Quá trình này thường mất 5-15 giây</p>
-            <button class="btn btn-outline" style="margin:0 auto; font-size:12px;" onclick="openUpload()">Hủy & Thử lại</button>
-        </div>
-        <div id="error-box" class="hidden" style="text-align:center;">
-            <p id="error-msg" style="color:var(--col-debt); font-weight:600; margin-bottom:20px;"></p>
-            <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="openUpload()">Quay lại</button>
-        </div>
-        <form id="order-form" class="hidden" onsubmit="saveOrder(event)">
-            <div class="form-group"><label>Số Tiền</label><input type="text" id="amount" style="font-size: 26px; font-weight: 900; color: #10B981;" required></div>
-            <div class="form-group"><label>Tên Khách Hàng</label><input type="text" id="customerName" required></div>
-            <div class="form-group"><label>Sản phẩm</label><input type="text" id="products"></div>
-            <div class="form-actions" style="display:flex; gap:12px; margin-top:20px;"><button type="button" class="btn btn-outline" style="flex:1; justify-content:center;" onclick="closeAll()">Hủy</button><button type="submit" class="btn btn-primary" style="flex:2; justify-content:center;">Lưu Đơn</button></div>
-        </form>
+        <div id="upload-main-area"><div style="border: 2px dashed #E2E8F0; padding: 30px; border-radius: 20px; text-align: center; cursor: pointer; margin-bottom:16px;" onclick="document.getElementById('file-input').click()"><input type="file" id="file-input" accept="image/*" hidden onchange="handleFile(this.files[0])"><i class="fa-regular fa-image" style="font-size: 40px; color: #3B82F6; margin-bottom: 12px;"></i><p style="font-weight: 700;">Chọn ảnh</p></div><div class="form-group"><label>Dán chữ</label><textarea id="magic-paste" style="height:50px; resize:none;" oninput="handleMagicPaste(this.value)"></textarea></div></div>
+        <div id="scan-loader" class="scan-loader hidden"><div class="spinner"></div><p id="scan-status" style="font-weight:700;">AI đang đọc...</p></div>
+        <form id="order-form" class="hidden" onsubmit="saveOrder(event)"><div class="form-group"><label>Số Tiền</label><input type="text" id="amount" style="font-size: 24px; font-weight: 900; color: #10B981;" required></div><div class="form-group"><label>Khách Hàng</label><input type="text" id="customerName" required></div><div class="form-group"><label>Sản phẩm</label><input type="text" id="products"></div><div style="display:flex; gap:10px;"><button type="button" class="btn btn-outline" style="flex:1; justify-content:center;" onclick="closeAll()">Hủy</button><button type="submit" class="btn btn-primary" style="flex:2; justify-content:center;">Lưu (Local)</button></div></form>
     </div></div></div>
 
     <script>
@@ -146,17 +109,9 @@
 
         function closeAll() { var ms = document.querySelectorAll('.modal-overlay'); for(var i=0; i<ms.length; i++) ms[i].classList.remove('active'); }
         function openSettings() { document.getElementById('apiKeyInput').value = localStorage.getItem('lotus_gemini_key') || ''; document.getElementById('settings-modal').classList.add('active'); }
-        function openUpload() { document.getElementById('upload-modal').classList.add('active'); document.getElementById('upload-main-area').classList.remove('hidden'); document.getElementById('order-form').classList.add('hidden'); document.getElementById('scan-loader').classList.add('hidden'); document.getElementById('error-box').classList.add('hidden'); document.getElementById('magic-paste').value = ''; }
-        
-        function openDashboard() {
-            document.getElementById('dashboard-modal').classList.add('active');
-            var total = 0; cards.forEach(function(c) { total += (Number(c.amount) || 0); });
-            document.getElementById('dash-revenue').textContent = new Intl.NumberFormat('vi-VN').format(total) + ' đ';
-            document.getElementById('dash-orders').textContent = cards.length;
-        }
-
+        function openUpload() { document.getElementById('upload-modal').classList.add('active'); document.getElementById('upload-main-area').classList.remove('hidden'); document.getElementById('order-form').classList.add('hidden'); document.getElementById('scan-loader').classList.add('hidden'); document.getElementById('magic-paste').value = ''; }
         function saveKey() { localStorage.setItem('lotus_gemini_key', document.getElementById('apiKeyInput').value.trim()); alert('Đã lưu!'); closeAll(); }
-        function saveLocal() { localStorage.setItem('lotus_crm_cards', JSON.stringify(cards)); }
+        function saveLocal() { localStorage.setItem('lotus_crm_cards', JSON.stringify(cards)); renderBoard(); }
 
         function renderBoard() {
             var states = ['quote', 'confirm', 'deliver', 'paid', 'debt', 'completed'];
@@ -167,72 +122,59 @@
                 h.querySelector('.col-count').textContent = list.length; h.querySelector('.col-total').textContent = new Intl.NumberFormat('vi-VN').format(sum) + ' đ';
                 list.forEach(function(c) {
                     var d = document.createElement('div'); d.className = 'card'; d.draggable = true; d.setAttribute('data-id', c.id);
-                    d.innerHTML = '<span class="card-price">' + Number(c.amount).toLocaleString() + ' đ</span>' +
-                                  '<span class="card-name">' + c.customerName + '</span>' +
-                                  '<div class="card-footer"><span class="card-date">' + new Date(c.date).toLocaleDateString('vi-VN') + '</span>' +
-                                  '<button class="btn-delete" onclick="deleteCard(\'' + c.id + '\')"><i class="fa-solid fa-trash"></i></button></div>';
+                    d.innerHTML = '<span class="card-price">' + Number(c.amount).toLocaleString() + ' đ</span><span class="card-name">' + c.customerName + '</span><div class="card-footer"><span class="card-date">' + new Date(c.date).toLocaleDateString('vi-VN') + '</span><button class="btn-delete" onclick="deleteCard(\'' + c.id + '\')"><i class="fa-solid fa-trash"></i></button></div>';
                     d.ondragstart = function() { d.classList.add('dragging'); }; d.ondragend = function() { d.classList.remove('dragging'); }; b.appendChild(d);
                 });
                 b.ondragover = function(e) { e.preventDefault(); };
-                b.ondrop = function(e) { e.preventDefault(); var drag = document.querySelector('.dragging'); if (drag) { var id = drag.getAttribute('data-id'); var idx = -1; for(var i=0; i<cards.length; i++) { if(cards[i].id === id) { idx = i; break; } } if (idx > -1) { cards[idx].status = st; saveLocal(); renderBoard(); if (supabase) supabase.from('orders').update({status: st}).eq('id', id).then(function(){}); } } };
+                b.ondrop = function(e) { e.preventDefault(); var drag = document.querySelector('.dragging'); if (drag) { var id = drag.getAttribute('data-id'); for(var i=0; i<cards.length; i++) { if(cards[i].id === id) { cards[i].status = st; break; } } saveLocal(); } };
             });
         }
 
+        function syncOnline() {
+            if (!window.supabase) { alert('Chưa kết nối được mạng!'); return; }
+            if (!supabase) supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            document.getElementById('sync-modal').classList.add('active');
+            document.getElementById('sync-loading').classList.remove('hidden');
+            document.getElementById('sync-success').classList.add('hidden');
+
+            // Strategy: Clear and Re-upload all to ensure consistency
+            supabase.from('orders').delete().neq('id', '0').then(function() {
+                var rows = cards.map(function(c) { return { id: c.id, customerName: c.customerName, amount: String(c.amount), products: c.products, status: c.status, created_at: c.date }; });
+                if (rows.length === 0) { finishSync(); return; }
+                supabase.from('orders').insert(rows).then(finishSync);
+            });
+        }
+        function finishSync() { document.getElementById('sync-loading').classList.add('hidden'); document.getElementById('sync-success').classList.remove('hidden'); }
+
         function handleMagicPaste(val) { if (val.length < 10) return; document.getElementById('upload-main-area').classList.add('hidden'); document.getElementById('scan-loader').classList.remove('hidden'); callAI(val, false); }
-        function handleFile(file) { if (!file) return; document.getElementById('upload-main-area').classList.add('hidden'); document.getElementById('scan-loader').classList.remove('hidden'); var reader = new FileReader(); reader.readAsDataURL(file); reader.onload = function(e) { var img = new Image(); img.src = e.target.result; img.onload = function() { var canvas = document.createElement('canvas'); var max = 1024; var w = img.width; var h = img.height; if (w > h) { if (w > max) { h *= max / w; w = max; } } else { if (h > max) { w *= max / h; h = max; } } canvas.width = w; canvas.height = h; var ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h); var base64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1]; callAI(base64, true); }; }; }
+        function handleFile(file) { if (!file) return; document.getElementById('upload-main-area').classList.add('hidden'); document.getElementById('scan-loader').classList.remove('hidden'); var reader = new FileReader(); reader.readAsDataURL(file); reader.onload = function(e) { var img = new Image(); img.src = e.target.result; img.onload = function() { var canvas = document.createElement('canvas'); var max = 800; var w = img.width, h = img.height; if (w > max) { h *= max/w; w = max; } canvas.width = w; canvas.height = h; canvas.getContext('2d').drawImage(img, 0,0,w,h); callAI(canvas.toDataURL('image/jpeg', 0.7).split(',')[1], true); }; }; }
 
         function callAI(data, isImage) {
             var key = (localStorage.getItem('lotus_gemini_key') || '').trim();
-            var scanStatus = document.getElementById('scan-status');
-            var loader = document.getElementById('scan-loader');
-            var errorBox = document.getElementById('error-box');
-            var errorMsg = document.getElementById('error-msg');
-            
-            if (!key) { loader.classList.add('hidden'); errorBox.classList.remove('hidden'); errorMsg.textContent = "Chưa có API Key!"; return; }
-
-            loader.classList.remove('hidden');
-            errorBox.classList.add('hidden');
-            document.getElementById('order-form').classList.add('hidden');
-            scanStatus.textContent = "AI đang xử lý báo giá...";
-
-            var targetModel = isImage ? 'models/gemini-1.5-flash' : 'models/gemini-pro';
-            var part = isImage ? { inlineData: { mimeType: "image/jpeg", data: data } } : { text: data };
-            var body = { contents: [{ parts: [{ text: "Extract JSON: customerName, amount, products" }, part] }] };
-
-            var controller = new AbortController();
-            var timeoutId = setTimeout(function() { controller.abort(); loader.classList.add('hidden'); errorBox.classList.remove('hidden'); errorMsg.textContent = "Hết thời gian chờ. Thử lại nhé!"; }, 25000);
-
-            fetch('https://generativelanguage.googleapis.com/v1beta/' + targetModel + ':generateContent?key=' + key, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: controller.signal })
-            .then(function(res) { 
-                clearTimeout(timeoutId);
-                return res.json().then(function(d) { if (!res.ok) throw new Error(d.error ? d.error.message : "Lỗi Google"); return d; });
-            })
+            if (!key) { alert('Thiếu API Key!'); openUpload(); return; }
+            var body = { contents: [{ parts: [{ text: "Extract JSON: customerName, amount, products" }, isImage ? { inlineData: { mimeType: "image/jpeg", data: data } } : { text: data }] }] };
+            fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + key, { method: 'POST', body: JSON.stringify(body) })
+            .then(function(res) { return res.json(); })
             .then(function(d) {
-                var rawText = d.candidates[0].content.parts[0].text;
-                var json = JSON.parse(rawText.replace(/```json/g, '').replace(/```/g, '').trim());
-                loader.classList.add('hidden');
+                var json = JSON.parse(d.candidates[0].content.parts[0].text.replace(/```json/g, '').replace(/```/g, '').trim());
+                document.getElementById('scan-loader').classList.add('hidden');
                 document.getElementById('order-form').classList.remove('hidden');
                 document.getElementById('customerName').value = json.customerName || '';
                 document.getElementById('amount').value = String(json.amount || '').replace(/[^0-9]/g, '');
                 document.getElementById('products').value = json.products || '';
-            })
-            .catch(function(err) {
-                clearTimeout(timeoutId); if (err.name === 'AbortError') return;
-                loader.classList.add('hidden'); errorBox.classList.remove('hidden'); errorMsg.textContent = "Lỗi: " + err.message;
-            });
+            }).catch(function(e) { alert('Lỗi AI: ' + e.message); openUpload(); });
         }
 
-        function saveOrder(e) {
-            e.preventDefault();
-            var c = { id: Date.now().toString(), customerName: document.getElementById('customerName').value, amount: parseInt(document.getElementById('amount').value) || 0, products: document.getElementById('products').value, status: 'quote', date: new Date().toISOString() };
-            cards.unshift(c); saveLocal(); renderBoard(); closeAll();
-            if (supabase) supabase.from('orders').upsert({ id: c.id, customerName: c.customerName, amount: String(c.amount), products: c.products, status: c.status }).then(function(){});
+        function saveOrder(e) { e.preventDefault(); var c = { id: Date.now().toString(), customerName: document.getElementById('customerName').value, amount: parseInt(document.getElementById('amount').value) || 0, products: document.getElementById('products').value, status: 'quote', date: new Date().toISOString() }; cards.unshift(c); saveLocal(); closeAll(); }
+        function deleteCard(id) { if (confirm('Xoá?')) { cards = cards.filter(function(x) { return x.id !== id; }); saveLocal(); } }
+        function openDashboard() { 
+            var total = 0; cards.forEach(function(c) { total += (Number(c.amount) || 0); });
+            document.getElementById('dash-content').innerHTML = '<h2 style="font-size:32px; font-weight:900;">' + total.toLocaleString() + ' đ</h2><p style="color:#64748B; font-weight:600;">Tổng doanh thu ('+cards.length+' đơn)</p>';
+            document.getElementById('dashboard-modal').classList.add('active'); 
         }
-
-        function deleteCard(id) { if (confirm('Xoá?')) { cards = cards.filter(function(x) { return x.id !== id; }); saveLocal(); renderBoard(); if (supabase) supabase.from('orders').delete().eq('id', id).then(function(){}); } }
 
         renderBoard();
-        setTimeout(function() { if (window.supabase) { supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); supabase.from('orders').select('*').order('created_at', { ascending: false }).then(function(res) { if (res.data && res.data.length > 0) { cards = res.data.map(function(d) { return { id: d.id, customerName: d.customerName, amount: parseInt(d.amount) || 0, products: d.products, status: d.status, date: d.created_at }; }); renderBoard(); saveLocal(); } }); } }, 500);
+        setTimeout(function() { if (window.supabase && cards.length === 0) { supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); supabase.from('orders').select('*').order('created_at', { ascending: false }).then(function(res) { if (res.data && res.data.length > 0) { cards = res.data.map(function(d) { return { id: d.id, customerName: d.customerName, amount: parseInt(d.amount) || 0, products: d.products, status: d.status, date: d.created_at }; }); renderBoard(); } }); } }, 500);
     </script>
 </body>
 </html>
