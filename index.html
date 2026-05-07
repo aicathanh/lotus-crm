@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lotus CRM - v7.8 Stability</title>
+    <title>Lotus CRM - v7.9 Phoenix</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
@@ -11,14 +11,15 @@
         .modal-overlay { display: none !important; }
         .modal-overlay.active { display: flex !important; opacity: 1 !important; pointer-events: auto !important; }
         .app-header { z-index: 10000 !important; position: relative !important; }
-        #debug-tag { background: #F59E0B !important; color: #FFFFFF !important; }
+        #debug-tag { background: #A855F7 !important; color: #FFFFFF !important; }
         .error-detail { margin-top: 10px; font-family: monospace; font-size: 11px; padding: 10px; background: #FFF1F2; border: 1px solid #FDA4AF; color: #9F1239; border-radius: 4px; white-space: pre-wrap; }
-        .magic-paste-area { width: 100%; height: 100px; padding: 10px; border: 2px dashed var(--primary); border-radius: 8px; font-size: 13px; margin-top: 10px; }
+        .magic-paste-area { width: 100%; height: 80px; padding: 10px; border: 2px dashed var(--primary); border-radius: 8px; font-size: 13px; margin-top: 10px; background: #F0FDFA; }
+        .instruction-box { background: #EFF6FF; border-left: 4px solid #3B82F6; padding: 10px; margin-top: 15px; font-size: 12px; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-    <div id="debug-tag" style="position:fixed; top:0; left:0; font-size:10px; padding:2px 8px; z-index:10001; border-radius: 0 0 4px 0; font-weight:bold;">v7.8 - Stability</div>
+    <div id="debug-tag" style="position:fixed; top:0; left:0; font-size:10px; padding:2px 8px; z-index:10001; border-radius: 0 0 4px 0; font-weight:bold;">v7.9 - Phoenix</div>
 
     <div class="app-container">
         <header class="app-header">
@@ -26,7 +27,6 @@
             <div class="header-filters"><div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="search-input" oninput="renderBoard()" placeholder="Tìm kiếm..."></div></div>
             <div class="header-actions">
                 <button class="btn btn-outline" onclick="openSettings()"><i class="fa-solid fa-gear"></i></button>
-                <button class="btn btn-outline" onclick="openDashboard()"><i class="fa-solid fa-chart-pie"></i></button>
                 <button class="btn btn-primary" onclick="openUpload()"><i class="fa-solid fa-cloud-arrow-up"></i> Tải Báo Giá</button>
             </div>
         </header>
@@ -43,8 +43,8 @@
 
     <!-- Modals -->
     <div class="modal-overlay" id="settings-modal"><div class="modal"><div class="modal-header"><h3>Cài đặt AI</h3><button class="close-btn" onclick="closeAll()"><i class="fa-solid fa-xmark"></i></button></div><div class="modal-body">
-        <div class="form-group"><label>Google Gemini API Key</label><input type="password" id="apiKeyInput" placeholder="Dán mã vào đây..."></div>
-        <div style="font-size:11px; color:#666; margin-top:5px;">Link tạo mã mới: <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--primary)">aistudio.google.com</a></div>
+        <div class="form-group"><label>Google Gemini API Key</label><input type="password" id="apiKeyInput" placeholder="Dán mã mới vào đây..."></div>
+        <div class="instruction-box"><b>Cách lấy mã mới:</b><br>1. Truy cập <a href="https://aistudio.google.com/app/apikey" target="_blank">AI Studio</a><br>2. Nhấn <b>Create API Key</b><br>3. Copy mã và dán vào đây.</div>
         <div class="form-actions" style="margin-top:15px;"><button class="btn btn-primary" onclick="saveKey()">Lưu Cấu Hình</button></div>
     </div></div></div>
     
@@ -55,17 +55,21 @@
                 <i class="fa-regular fa-image upload-icon"></i>
                 <p>Nhấn hoặc Kéo thả ảnh báo giá</p>
             </div>
-            <div style="text-align: center; margin-top:15px;">
-                <p style="font-size:12px; margin-bottom:10px;">Hoặc dán văn bản từ ảnh (nếu quét ảnh lỗi)</p>
-                <textarea class="magic-paste-area" id="magic-paste" placeholder="Dán nội dung chữ đã copy từ ảnh vào đây..." oninput="handleMagicPaste(this.value)"></textarea>
+            <div style="text-align: center; margin-top:10px;">
+                <p style="font-size:12px; color:#666;">Hoặc dán văn bản từ ảnh (Copy chữ trong ảnh dán vào đây)</p>
+                <textarea class="magic-paste-area" id="magic-paste" placeholder="Dán nội dung chữ từ ảnh báo giá vào đây..." oninput="handleMagicPaste(this.value)"></textarea>
             </div>
-            <div style="text-align: center; margin-top:10px;"><button class="btn btn-outline" onclick="openManualForm()">Nhập Thủ Công</button></div>
         </div>
-        <div id="scan-loader" class="scan-loader hidden"><div class="spinner"></div><p id="scan-status">AI đang đọc dữ liệu...</p></div>
+        <div id="scan-loader" class="scan-loader hidden"><div class="spinner"></div><p id="scan-status">AI đang trích xuất dữ liệu...</p></div>
         <div id="error-box" class="hidden">
             <div class="error-detail" id="error-msg"></div>
-            <p style="font-size:11px; color:#666; margin-top:10px;">* Google từ chối quét ảnh trực tiếp. Hãy dùng tính năng <b>"Dán văn bản"</b> ở trên!</p>
-            <div style="text-align: center; margin-top: 15px;"><button class="btn btn-primary" onclick="openManualForm()">Nhập Thủ Công</button></div>
+            <div class="instruction-box">
+                <p><b>KHẮC PHỤC LỖI:</b></p>
+                <p>1. Mã API Key của bạn bị lỗi "Not Found".</p>
+                <p>2. Hãy <a href="https://aistudio.google.com/app/apikey" target="_blank" style="font-weight:bold; color:#2563EB;">Bấm vào đây để tạo mã mới</a>.</p>
+                <p>3. Thay mã mới vào phần Cài đặt là chạy ngay!</p>
+            </div>
+            <div style="text-align: center; margin-top: 15px;"><button class="btn btn-outline" onclick="openManualForm()">Nhập Thủ Công</button></div>
         </div>
         <form id="order-form" class="hidden" onsubmit="saveOrder(event)">
             <div class="form-grid">
@@ -87,10 +91,9 @@
 
         function closeAll() { var ms = document.querySelectorAll('.modal-overlay'); for(var i=0; i<ms.length; i++) ms[i].classList.remove('active'); }
         function openSettings() { document.getElementById('apiKeyInput').value = localStorage.getItem('lotus_gemini_key') || ''; document.getElementById('settings-modal').classList.add('active'); }
-        function openDashboard() { updateStats(); document.getElementById('dashboard-modal').classList.add('active'); }
         function openUpload() { document.getElementById('upload-modal').classList.add('active'); document.getElementById('upload-main-area').classList.remove('hidden'); document.getElementById('order-form').classList.add('hidden'); document.getElementById('scan-loader').classList.add('hidden'); document.getElementById('error-box').classList.add('hidden'); document.getElementById('magic-paste').value = ''; }
         function openManualForm() { document.getElementById('upload-main-area').classList.add('hidden'); document.getElementById('scan-loader').classList.add('hidden'); document.getElementById('error-box').classList.add('hidden'); document.getElementById('order-form').classList.remove('hidden'); document.getElementById('order-form').reset(); }
-        function saveKey() { localStorage.setItem('lotus_gemini_key', document.getElementById('apiKeyInput').value.trim()); alert('Đã lưu!'); closeAll(); }
+        function saveKey() { localStorage.setItem('lotus_gemini_key', document.getElementById('apiKeyInput').value.trim()); alert('Đã lưu mã mới!'); closeAll(); }
         function saveLocal() { localStorage.setItem('lotus_crm_cards', JSON.stringify(cards)); }
 
         function renderBoard() {
@@ -112,15 +115,12 @@
                 b.ondragover = function(e) { e.preventDefault(); };
                 b.ondrop = function(e) { e.preventDefault(); var drag = document.querySelector('.dragging'); if (drag) { var id = drag.getAttribute('data-id'); var idx = -1; for(var i=0; i<cards.length; i++) { if(cards[i].id === id) { idx = i; break; } } if (idx > -1) { cards[idx].status = st; saveLocal(); renderBoard(); if (supabase) supabase.from('orders').update({status: st}).eq('id', id).then(function(){}); } } };
             });
-            updateStats();
         }
 
         function handleMagicPaste(val) {
             if (val.length < 10) return;
             document.getElementById('upload-main-area').classList.add('hidden');
             document.getElementById('scan-loader').classList.remove('hidden');
-            document.getElementById('scan-status').textContent = "AI đang trích xuất dữ liệu...";
-            
             callAI(val, false);
         }
 
@@ -128,17 +128,13 @@
             if (!file) return;
             document.getElementById('upload-main-area').classList.add('hidden');
             document.getElementById('scan-loader').classList.remove('hidden');
-            document.getElementById('scan-status').textContent = "Đang quét ảnh...";
-            
             var reader = new FileReader(); reader.readAsDataURL(file);
             reader.onload = function(e) {
                 var img = new Image(); img.src = e.target.result;
                 img.onload = function() {
-                    var canvas = document.createElement('canvas');
-                    var max = 1024; var w = img.width; var h = img.height;
+                    var canvas = document.createElement('canvas'); var max = 1024; var w = img.width; var h = img.height;
                     if (w > h) { if (w > max) { h *= max / w; w = max; } } else { if (h > max) { w *= max / h; h = max; } }
-                    canvas.width = w; canvas.height = h;
-                    var ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
+                    canvas.width = w; canvas.height = h; var ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
                     var base64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
                     callAI(base64, true);
                 };
@@ -150,9 +146,9 @@
             var part = isImage ? { inlineData: { mimeType: "image/jpeg", data: data } } : { text: data };
             var body = { contents: [{ parts: [{ text: "Extract JSON: customerName, phone, address, quoteNumber, amount" }, part] }] };
             
-            // Try standard flash first
-            var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + key;
-            if (!isImage) url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=' + key;
+            // USE v1 STABLE ENDPOINT
+            var model = isImage ? 'gemini-1.5-flash' : 'gemini-pro';
+            var url = 'https://generativelanguage.googleapis.com/v1/models/' + model + ':generateContent?key=' + key;
 
             fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
             .then(function(res) { return res.json().then(function(d) { if (!res.ok) throw new Error(d.error ? d.error.message : "Error"); return d; }); })
@@ -181,14 +177,6 @@
         }
 
         function deleteCard(id) { if (confirm('Xoá?')) { cards = cards.filter(function(x) { return x.id !== id; }); saveLocal(); renderBoard(); if (supabase) supabase.from('orders').delete().eq('id', id).then(function(){}); } }
-
-        function updateStats() {
-            var sumBy = function(s) { var total = 0; cards.forEach(function(c) { if(c.status === s) total += (Number(c.amount) || 0); }); return total; };
-            var fmt = function(v) { return new Intl.NumberFormat('vi-VN').format(v) + ' đ'; };
-            if (document.getElementById('stat-quote')) document.getElementById('stat-quote').textContent = fmt(sumBy('quote'));
-            if (document.getElementById('stat-completed')) { var cTotal = 0; cards.forEach(function(c) { if(['completed','paid','deliver'].indexOf(c.status) > -1) cTotal += (Number(c.amount) || 0); }); document.getElementById('stat-completed').textContent = fmt(cTotal); }
-            if (document.getElementById('stat-debt')) document.getElementById('stat-debt').textContent = fmt(sumBy('debt'));
-        }
 
         renderBoard();
         setTimeout(function() { if (window.supabase) { supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); supabase.from('orders').select('*').order('created_at', { ascending: false }).then(function(res) { if (res.data && res.data.length > 0) { cards = res.data.map(function(d) { return { id: d.id, customerName: d.customerName, phone: d.phone, address: d.address, quoteNumber: d.quoteNumber, amount: parseInt(d.amount) || 0, status: d.status, date: d.created_at }; }); renderBoard(); saveLocal(); } }); } }, 500);
