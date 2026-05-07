@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lotus CRM - v6.7 Ultra</title>
+    <title>Lotus CRM - v6.8 Precision</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
@@ -11,13 +11,13 @@
         .modal-overlay { display: none !important; }
         .modal-overlay.active { display: flex !important; opacity: 1 !important; pointer-events: auto !important; }
         .app-header { z-index: 10000 !important; position: relative !important; }
-        #debug-tag { background: #F97316 !important; color: #FFFFFF !important; }
+        #debug-tag { background: #DC2626 !important; color: #FFFFFF !important; }
         .upload-area.drag-over { border-color: #3B82F6 !important; background: #EFF6FF !important; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-    <div id="debug-tag" style="position:fixed; top:0; left:0; font-size:10px; padding:2px 8px; z-index:10001; border-radius: 0 0 4px 0; font-weight:bold;">v6.7 - Ultra</div>
+    <div id="debug-tag" style="position:fixed; top:0; left:0; font-size:10px; padding:2px 8px; z-index:10001; border-radius: 0 0 4px 0; font-weight:bold;">v6.8 - Precision</div>
 
     <div class="app-container">
         <header class="app-header">
@@ -81,7 +81,7 @@
         function saveKey() {
             var key = document.getElementById('apiKeyInput').value.trim();
             localStorage.setItem('lotus_gemini_key', key);
-            alert('Đã lưu API Key! Hãy thử tải báo giá lại.');
+            alert('Đã lưu API Key!');
             closeAll();
         }
         function saveLocal() {
@@ -166,20 +166,22 @@
             reader.onload = function() {
                 var key = (localStorage.getItem('lotus_gemini_key') || '').trim();
                 if (!key) {
-                    alert("Chưa có API Key! Hãy vào phần Cài đặt (Bánh răng) để dán mã.");
+                    alert("Chưa có API Key!");
                     document.getElementById('scan-loader').classList.add('hidden');
                     document.getElementById('upload-area').classList.remove('hidden');
                     return;
                 }
 
-                fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + key, {
+                // FIXED URL TO v1 AND ADDED CONTENT-TYPE HEADER
+                fetch('https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=' + key, {
                     method: 'POST',
-                    body: JSON.stringify({ contents: [{ parts: [{ text: "Hãy đọc ảnh báo giá này và trả về JSON chuẩn gồm các trường: customerName, phone, address, quoteNumber, amount (chỉ lấy số). Nếu không thấy trường nào hãy để trống." }, { inlineData: { mimeType: file.type, data: reader.result.split(',')[1] } }] }] })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: "Đọc ảnh báo giá này và trả về JSON chuẩn: customerName, phone, address, quoteNumber, amount (chỉ số). Nếu không thấy hãy để trống." }, { inlineData: { mimeType: file.type, data: reader.result.split(',')[1] } }] }] })
                 }).then(function(res) {
-                    if (!res.ok) {
-                        return res.json().then(function(err) { throw new Error(err.error.message || "Lỗi API"); });
-                    }
-                    return res.json();
+                    return res.json().then(function(d) {
+                        if (!res.ok) throw new Error(d.error ? d.error.message : "Lỗi không xác định");
+                        return d;
+                    });
                 }).then(function(d) {
                     var text = d.candidates[0].content.parts[0].text;
                     var json = JSON.parse(text.replace(/```json/g, '').replace(/```/g, '').trim());
@@ -198,57 +200,27 @@
             };
         }
 
-        // Setup Drag & Drop for Upload Area
         var ua = document.getElementById('upload-area');
         if (ua) {
             ua.ondragover = function(e) { e.preventDefault(); ua.classList.add('drag-over'); };
             ua.ondragleave = function() { ua.classList.remove('drag-over'); };
-            ua.ondrop = function(e) {
-                e.preventDefault();
-                ua.classList.remove('drag-over');
-                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                    handleFile(e.dataTransfer.files[0]);
-                }
-            };
+            ua.ondrop = function(e) { e.preventDefault(); ua.classList.remove('drag-over'); if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); };
         }
 
         function saveOrder(e) {
             e.preventDefault();
-            var c = {
-                id: Date.now().toString(),
-                customerName: document.getElementById('customerName').value,
-                phone: document.getElementById('phone').value,
-                address: document.getElementById('address').value,
-                quoteNumber: document.getElementById('quoteNumber').value,
-                amount: parseInt(document.getElementById('amount').value) || 0,
-                status: 'quote',
-                date: new Date().toISOString()
-            };
+            var c = { id: Date.now().toString(), customerName: document.getElementById('customerName').value, phone: document.getElementById('phone').value, address: document.getElementById('address').value, quoteNumber: document.getElementById('quoteNumber').value, amount: parseInt(document.getElementById('amount').value) || 0, status: 'quote', date: new Date().toISOString() };
             cards.unshift(c); saveLocal(); renderBoard(); closeAll();
             if (supabase) supabase.from('orders').upsert({ id: c.id, customerName: c.customerName, phone: c.phone, address: c.address, quoteNumber: c.quoteNumber, amount: String(c.amount), status: c.status }).then(function(){});
         }
 
-        function deleteCard(id) {
-            if (confirm('Xoá?')) {
-                cards = cards.filter(function(x) { return x.id !== id; });
-                saveLocal(); renderBoard();
-                if (supabase) supabase.from('orders').delete().eq('id', id).then(function(){});
-            }
-        }
+        function deleteCard(id) { if (confirm('Xoá?')) { cards = cards.filter(function(x) { return x.id !== id; }); saveLocal(); renderBoard(); if (supabase) supabase.from('orders').delete().eq('id', id).then(function(){}); } }
 
         function updateStats() {
-            var sumBy = function(s) {
-                var total = 0;
-                cards.forEach(function(c) { if(c.status === s) total += (Number(c.amount) || 0); });
-                return total;
-            };
+            var sumBy = function(s) { var total = 0; cards.forEach(function(c) { if(c.status === s) total += (Number(c.amount) || 0); }); return total; };
             var fmt = function(v) { return new Intl.NumberFormat('vi-VN').format(v) + ' đ'; };
             if (document.getElementById('stat-quote')) document.getElementById('stat-quote').textContent = fmt(sumBy('quote'));
-            if (document.getElementById('stat-completed')) {
-                var cTotal = 0;
-                cards.forEach(function(c) { if(['completed','paid','deliver'].indexOf(c.status) > -1) cTotal += (Number(c.amount) || 0); });
-                document.getElementById('stat-completed').textContent = fmt(cTotal);
-            }
+            if (document.getElementById('stat-completed')) { var cTotal = 0; cards.forEach(function(c) { if(['completed','paid','deliver'].indexOf(c.status) > -1) cTotal += (Number(c.amount) || 0); }); document.getElementById('stat-completed').textContent = fmt(cTotal); }
             if (document.getElementById('stat-debt')) document.getElementById('stat-debt').textContent = fmt(sumBy('debt'));
         }
 
@@ -257,12 +229,7 @@
             if (window.supabase) {
                 supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
                 supabase.from('orders').select('*').order('created_at', { ascending: false }).then(function(res) {
-                    if (res.data && res.data.length > 0) {
-                        cards = res.data.map(function(d) {
-                            return { id: d.id, customerName: d.customerName, phone: d.phone, address: d.address, quoteNumber: d.quoteNumber, amount: parseInt(d.amount) || 0, status: d.status, date: d.created_at };
-                        });
-                        renderBoard(); saveLocal();
-                    }
+                    if (res.data && res.data.length > 0) { cards = res.data.map(function(d) { return { id: d.id, customerName: d.customerName, phone: d.phone, address: d.address, quoteNumber: d.quoteNumber, amount: parseInt(d.amount) || 0, status: d.status, date: d.created_at }; }); renderBoard(); saveLocal(); }
                 });
             }
         }, 500);
