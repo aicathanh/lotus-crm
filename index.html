@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lotus CRM - v7.0 Diagnostic</title>
+    <title>Lotus CRM - v7.1 Stable</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
@@ -11,21 +11,18 @@
         .modal-overlay { display: none !important; }
         .modal-overlay.active { display: flex !important; opacity: 1 !important; pointer-events: auto !important; }
         .app-header { z-index: 10000 !important; position: relative !important; }
-        #debug-tag { background: #EAB308 !important; color: #000000 !important; }
-        .test-res { margin-top: 10px; font-size: 12px; padding: 10px; border-radius: 4px; display: none; }
-        .test-res.err { display: block; background: #FEE2E2; color: #DC2626; border: 1px solid #FECACA; }
-        .test-res.ok { display: block; background: #DCFCE7; color: #16A34A; border: 1px solid #BBF7D0; }
+        #debug-tag { background: #3B82F6 !important; color: #FFFFFF !important; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-    <div id="debug-tag" style="position:fixed; top:0; left:0; font-size:10px; padding:2px 8px; z-index:10001; border-radius: 0 0 4px 0; font-weight:bold;">v7.0 - Diagnostic</div>
+    <div id="debug-tag" style="position:fixed; top:0; left:0; font-size:10px; padding:2px 8px; z-index:10001; border-radius: 0 0 4px 0; font-weight:bold;">v7.1 - Stable</div>
 
     <div class="app-container">
         <header class="app-header">
             <div class="logo"><i class="fa-solid fa-leaf"></i> <span>Lotus CRM</span></div>
             <div class="header-filters">
-                <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="search-input" oninput="renderBoard()" placeholder="Tìm kiếm..."></div>
+                <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="search-input" oninput="renderBoard()" placeholder="Tìm tên khách, sđt..."></div>
             </div>
             <div class="header-actions">
                 <button class="btn btn-outline" onclick="openSettings()"><i class="fa-solid fa-gear"></i></button>
@@ -44,17 +41,33 @@
         </main>
     </div>
 
-    <!-- Settings Modal with Diagnostic -->
-    <div class="modal-overlay" id="settings-modal"><div class="modal"><div class="modal-header"><h3>Cài đặt AI</h3><button class="close-btn" onclick="closeAll()"><i class="fa-solid fa-xmark"></i></button></div><div class="modal-body">
-        <div class="form-group"><label>Google Gemini API Key</label><input type="password" id="apiKeyInput" placeholder="Dán mã vào đây..."></div>
-        <div id="test-result" class="test-res"></div>
-        <div class="form-actions" style="margin-top:15px;">
-            <button class="btn btn-outline" onclick="testAIConnection()">Kiểm tra kết nối AI</button>
-            <button class="btn btn-primary" onclick="saveKey()">Lưu & Đóng</button>
+    <!-- Modals -->
+    <div class="modal-overlay" id="settings-modal"><div class="modal"><div class="modal-header"><h3>Cài đặt AI</h3><button class="close-btn" onclick="closeAll()"><i class="fa-solid fa-xmark"></i></button></div><div class="modal-body"><div class="form-group"><label>Google Gemini API Key</label><input type="password" id="apiKeyInput" placeholder="Dán mã vào đây..."></div><div class="form-actions"><button class="btn btn-primary" onclick="saveKey()">Lưu Cấu Hình</button></div></div></div></div>
+    
+    <div class="modal-overlay" id="upload-modal"><div class="modal"><div class="modal-header"><h3>Tải Báo Giá</h3><button class="close-btn" onclick="closeAll()"><i class="fa-solid fa-xmark"></i></button></div><div class="modal-body">
+        <div id="upload-main-area">
+            <div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()">
+                <input type="file" id="file-input" accept="image/*" hidden onchange="handleFile(this.files[0])">
+                <i class="fa-regular fa-image upload-icon"></i>
+                <p>Nhấn hoặc Kéo thả ảnh báo giá</p>
+            </div>
+            <div style="text-align: center; margin-top: 15px;">
+                <button class="btn btn-outline" onclick="openManualForm()">Hoặc Nhập Thủ Công</button>
+            </div>
         </div>
+        <div id="scan-loader" class="scan-loader hidden"><div class="spinner"></div><p>AI đang đọc ảnh...</p></div>
+        <form id="order-form" class="hidden" onsubmit="saveOrder(event)">
+            <div class="form-grid">
+                <div class="form-group"><label>Tên Khách</label><input type="text" id="customerName" required></div>
+                <div class="form-group"><label>SĐT</label><input type="text" id="phone"></div>
+                <div class="form-group full-width"><label>Địa Chỉ</label><input type="text" id="address"></div>
+                <div class="form-group"><label>Số Báo Giá</label><input type="text" id="quoteNumber"></div>
+                <div class="form-group"><label>Tổng Tiền</label><input type="text" id="amount" required></div>
+            </div>
+            <div class="form-actions"><button type="button" class="btn btn-outline" onclick="closeAll()">Hủy</button><button type="submit" class="btn btn-primary">Lưu Đơn</button></div>
+        </form>
     </div></div></div>
 
-    <div class="modal-overlay" id="upload-modal"><div class="modal"><div class="modal-header"><h3>Tải Báo Giá</h3><button class="close-btn" onclick="closeAll()"><i class="fa-solid fa-xmark"></i></button></div><div class="modal-body"><div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()"><input type="file" id="file-input" accept="image/*" hidden onchange="handleFile(this.files[0])"><i class="fa-regular fa-image upload-icon"></i><p>Nhấn hoặc Kéo thả ảnh báo giá</p></div><div id="scan-loader" class="scan-loader hidden"><div class="spinner"></div><p id="loader-text">AI đang phân tích...</p></div><form id="order-form" class="hidden" onsubmit="saveOrder(event)"><div class="form-grid"><div class="form-group"><label>Tên Khách</label><input type="text" id="customerName" required></div><div class="form-group"><label>SĐT</label><input type="text" id="phone"></div><div class="form-group full-width"><label>Địa Chỉ</label><input type="text" id="address"></div><div class="form-group"><label>Số Báo Giá</label><input type="text" id="quoteNumber"></div><div class="form-group"><label>Tổng Tiền</label><input type="text" id="amount" required></div></div><div class="form-actions"><button type="button" class="btn btn-outline" onclick="closeAll()">Hủy</button><button type="submit" class="btn btn-primary">Lưu Đơn</button></div></form></div></div></div>
     <div class="modal-overlay" id="dashboard-modal"><div class="modal modal-lg"><div class="modal-header"><h3>Thống Kê</h3><button class="close-btn" onclick="closeAll()"><i class="fa-solid fa-xmark"></i></button></div><div class="modal-body"><div class="dashboard-grid"><div class="stat-card"><div class="stat-info"><span class="stat-label">Báo Giá</span><h4 class="stat-value" id="stat-quote">0 đ</h4></div></div><div class="stat-card"><div class="stat-info"><span class="stat-label">Hoàn Tất</span><h4 class="stat-value" id="stat-completed">0 đ</h4></div></div><div class="stat-card"><div class="stat-info"><span class="stat-label">Công Nợ</span><h4 class="stat-value" id="stat-debt">0 đ</h4></div></div></div></div></div></div>
 
     <script>
@@ -64,9 +77,10 @@
         var cards = JSON.parse(localStorage.getItem('lotus_crm_cards') || '[]');
 
         function closeAll() { var ms = document.querySelectorAll('.modal-overlay'); for(var i=0; i<ms.length; i++) ms[i].classList.remove('active'); }
-        function openSettings() { document.getElementById('apiKeyInput').value = localStorage.getItem('lotus_gemini_key') || ''; document.getElementById('settings-modal').classList.add('active'); document.getElementById('test-result').className = 'test-res'; }
+        function openSettings() { document.getElementById('apiKeyInput').value = localStorage.getItem('lotus_gemini_key') || ''; document.getElementById('settings-modal').classList.add('active'); }
         function openDashboard() { updateStats(); document.getElementById('dashboard-modal').classList.add('active'); }
-        function openUpload() { document.getElementById('upload-modal').classList.add('active'); document.getElementById('order-form').classList.add('hidden'); document.getElementById('upload-area').classList.remove('hidden'); }
+        function openUpload() { document.getElementById('upload-modal').classList.add('active'); document.getElementById('upload-main-area').classList.remove('hidden'); document.getElementById('order-form').classList.add('hidden'); document.getElementById('scan-loader').classList.add('hidden'); }
+        function openManualForm() { document.getElementById('upload-main-area').classList.add('hidden'); document.getElementById('order-form').classList.remove('hidden'); document.getElementById('order-form').reset(); }
         function saveKey() { localStorage.setItem('lotus_gemini_key', document.getElementById('apiKeyInput').value.trim()); alert('Đã lưu!'); closeAll(); }
         function saveLocal() { localStorage.setItem('lotus_crm_cards', JSON.stringify(cards)); }
 
@@ -92,63 +106,35 @@
             updateStats();
         }
 
-        function testAIConnection() {
-            var key = document.getElementById('apiKeyInput').value.trim();
-            var resEl = document.getElementById('test-result');
-            if (!key) { alert("Vui lòng nhập API Key!"); return; }
-            resEl.textContent = "Đang kiểm tra..."; resEl.className = "test-res ok";
-            fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + key, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: "Hãy trả lời đúng một từ: OK" }] }] })
-            }).then(function(res) {
-                return res.json().then(function(d) {
-                    if (res.ok) { resEl.textContent = "Kết nối thành công! AI sẵn sàng."; resEl.className = "test-res ok"; }
-                    else { resEl.textContent = "Lỗi kết nối: " + (d.error ? d.error.message : "Không xác định"); resEl.className = "test-res err"; }
-                });
-            }).catch(function(e) { resEl.textContent = "Lỗi mạng hoặc API: " + e.message; resEl.className = "test-res err"; });
-        }
-
         function handleFile(file) {
             if (!file) return;
-            document.getElementById('upload-area').classList.add('hidden');
+            document.getElementById('upload-main-area').classList.add('hidden');
             document.getElementById('scan-loader').classList.remove('hidden');
             var reader = new FileReader(); reader.readAsDataURL(file);
             reader.onload = function() {
                 var key = (localStorage.getItem('lotus_gemini_key') || '').trim();
                 var base64 = reader.result.split(',')[1];
-                var body = { contents: [{ parts: [{ text: "Hãy đọc ảnh báo giá này và trả về JSON chuẩn gồm các trường: customerName, phone, address, quoteNumber, amount (chỉ lấy số). Nếu không thấy trường nào hãy để trống." }, { inlineData: { mimeType: file.type, data: base64 } }] }] };
+                var body = { contents: [{ parts: [{ text: "Trả về JSON: customerName, phone, address, quoteNumber, amount (số)" }, { inlineData: { mimeType: file.type, data: base64 } }] }] };
                 
-                // MULTI-MODEL FALLBACK
-                var models = ['gemini-1.5-flash', 'gemini-1.5-flash-8b', 'gemini-pro-vision'];
-                var tryIdx = 0;
-
-                function tryNext() {
-                    if (tryIdx >= models.length) {
-                        alert("Cả 3 mô hình đều báo lỗi! Có thể API Key của bạn bị giới hạn vùng miền.");
-                        document.getElementById('scan-loader').classList.add('hidden'); document.getElementById('upload-area').classList.remove('hidden');
-                        return;
-                    }
-                    var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + models[tryIdx] + ':generateContent?key=' + key;
-                    fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-                    .then(function(res) {
-                        if (!res.ok) return res.json().then(function(e) { throw new Error(e.error ? e.error.message : "Lỗi"); });
-                        return res.json();
-                    }).then(function(d) {
-                        var text = d.candidates[0].content.parts[0].text;
-                        var json = JSON.parse(text.replace(/```json/g, '').replace(/```/g, '').trim());
-                        document.getElementById('scan-loader').classList.add('hidden');
-                        document.getElementById('order-form').classList.remove('hidden');
-                        document.getElementById('customerName').value = json.customerName || '';
-                        document.getElementById('phone').value = json.phone || '';
-                        document.getElementById('address').value = json.address || '';
-                        document.getElementById('quoteNumber').value = json.quoteNumber || '';
-                        document.getElementById('amount').value = String(json.amount || '').replace(/[^0-9]/g, '') || '';
-                    }).catch(function(err) {
-                        console.log("Thử " + models[tryIdx] + " lỗi, chuyển sang cái tiếp theo...");
-                        tryIdx++; tryNext();
-                    });
-                }
-                tryNext();
+                fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + key, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+                }).then(function(res) {
+                    if (!res.ok) return res.json().then(function(e) { throw new Error(e.error ? e.error.message : "Lỗi"); });
+                    return res.json();
+                }).then(function(d) {
+                    var text = d.candidates[0].content.parts[0].text;
+                    var json = JSON.parse(text.replace(/```json/g, '').replace(/```/g, '').trim());
+                    document.getElementById('scan-loader').classList.add('hidden');
+                    document.getElementById('order-form').classList.remove('hidden');
+                    document.getElementById('customerName').value = json.customerName || '';
+                    document.getElementById('phone').value = json.phone || '';
+                    document.getElementById('address').value = json.address || '';
+                    document.getElementById('quoteNumber').value = json.quoteNumber || '';
+                    document.getElementById('amount').value = String(json.amount || '').replace(/[^0-9]/g, '') || '';
+                }).catch(function(err) {
+                    alert("AI đang bận, vui lòng nhập thủ công hoặc thử lại sau!");
+                    openManualForm();
+                });
             };
         }
 
