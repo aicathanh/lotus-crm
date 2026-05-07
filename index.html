@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lotus CRM - v7.4 Master Force</title>
+    <title>Lotus CRM - v7.5 Truth</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
@@ -11,12 +11,13 @@
         .modal-overlay { display: none !important; }
         .modal-overlay.active { display: flex !important; opacity: 1 !important; pointer-events: auto !important; }
         .app-header { z-index: 10000 !important; position: relative !important; }
-        #debug-tag { background: #DC2626 !important; color: #FFFFFF !important; }
+        #debug-tag { background: #000000 !important; color: #FFFFFF !important; cursor: pointer; }
+        .error-detail { margin-top: 10px; font-family: monospace; font-size: 11px; padding: 10px; background: #FFF1F2; border: 1px solid #FDA4AF; color: #9F1239; border-radius: 4px; white-space: pre-wrap; word-break: break-all; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-    <div id="debug-tag" style="position:fixed; top:0; left:0; font-size:10px; padding:2px 8px; z-index:10001; border-radius: 0 0 4px 0; font-weight:bold;">v7.4 - Master Force</div>
+    <div id="debug-tag" onclick="alert('Debug Info: ' + localStorage.getItem('last_ai_error'))" style="position:fixed; top:0; left:0; font-size:10px; padding:2px 8px; z-index:10001; border-radius: 0 0 4px 0; font-weight:bold;">v7.5 - Truth</div>
 
     <div class="app-container">
         <header class="app-header">
@@ -51,8 +52,15 @@
                 <i class="fa-regular fa-image upload-icon"></i>
                 <p>Nhấn hoặc Kéo thả ảnh báo giá</p>
             </div>
+            <div style="text-align: center; margin-top:15px;"><button class="btn btn-outline" onclick="openManualForm()">Nhập Thủ Công</button></div>
         </div>
         <div id="scan-loader" class="scan-loader hidden"><div class="spinner"></div><p id="scan-status">AI đang đọc ảnh...</p></div>
+        <div id="error-box" class="hidden">
+            <div class="error-detail" id="error-msg"></div>
+            <div style="text-align: center; margin-top: 10px;">
+                <button class="btn btn-primary" onclick="openManualForm()">Chuyển Sang Nhập Thủ Công</button>
+            </div>
+        </div>
         <form id="order-form" class="hidden" onsubmit="saveOrder(event)">
             <div class="form-grid">
                 <div class="form-group"><label>Tên Khách</label><input type="text" id="customerName" required></div>
@@ -76,7 +84,8 @@
         function closeAll() { var ms = document.querySelectorAll('.modal-overlay'); for(var i=0; i<ms.length; i++) ms[i].classList.remove('active'); }
         function openSettings() { document.getElementById('apiKeyInput').value = localStorage.getItem('lotus_gemini_key') || ''; document.getElementById('settings-modal').classList.add('active'); }
         function openDashboard() { updateStats(); document.getElementById('dashboard-modal').classList.add('active'); }
-        function openUpload() { document.getElementById('upload-modal').classList.add('active'); document.getElementById('upload-main-area').classList.remove('hidden'); document.getElementById('order-form').classList.add('hidden'); document.getElementById('scan-loader').classList.add('hidden'); }
+        function openUpload() { document.getElementById('upload-modal').classList.add('active'); document.getElementById('upload-main-area').classList.remove('hidden'); document.getElementById('order-form').classList.add('hidden'); document.getElementById('scan-loader').classList.add('hidden'); document.getElementById('error-box').classList.add('hidden'); }
+        function openManualForm() { document.getElementById('upload-main-area').classList.add('hidden'); document.getElementById('scan-loader').classList.add('hidden'); document.getElementById('error-box').classList.add('hidden'); document.getElementById('order-form').classList.remove('hidden'); document.getElementById('order-form').reset(); }
         function saveKey() { localStorage.setItem('lotus_gemini_key', document.getElementById('apiKeyInput').value.trim()); alert('Đã lưu!'); closeAll(); }
         function saveLocal() { localStorage.setItem('lotus_crm_cards', JSON.stringify(cards)); }
 
@@ -106,13 +115,12 @@
             if (!file) return;
             document.getElementById('upload-main-area').classList.add('hidden');
             document.getElementById('scan-loader').classList.remove('hidden');
-            document.getElementById('scan-status').textContent = "Đang nén ảnh & Gửi AI...";
+            document.getElementById('error-box').classList.add('hidden');
             
             var reader = new FileReader(); reader.readAsDataURL(file);
             reader.onload = function(e) {
                 var img = new Image(); img.src = e.target.result;
                 img.onload = function() {
-                    // IMAGE SHRINKER LOGIC
                     var canvas = document.createElement('canvas');
                     var max = 1024; var w = img.width; var h = img.height;
                     if (w > h) { if (w > max) { h *= max / w; w = max; } } else { if (h > max) { w *= max / h; h = max; } }
@@ -121,43 +129,36 @@
                     var base64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
                     
                     var key = (localStorage.getItem('lotus_gemini_key') || '').trim();
-                    var body = { contents: [{ parts: [{ text: "Extract JSON from this invoice: customerName, phone, address, quoteNumber, amount" }, { inlineData: { mimeType: "image/jpeg", data: base64 } }] }] };
+                    var body = { contents: [{ parts: [{ text: "Extract JSON: customerName, phone, address, quoteNumber, amount" }, { inlineData: { mimeType: "image/jpeg", data: base64 } }] }] };
                     
-                    var endpoints = [
-                        'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent',
-                        'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent'
-                    ];
-                    var step = 0;
-
-                    function callAI() {
-                        if (step >= endpoints.length) {
-                            alert("Vẫn lỗi AI! Có thể API Key này không hỗ trợ quét ảnh. Hãy thử tạo API Key mới tại aistudio.google.com");
-                            document.getElementById('scan-loader').classList.add('hidden'); document.getElementById('upload-main-area').classList.remove('hidden');
-                            return;
-                        }
-                        fetch(endpoints[step] + '?key=' + key, {
-                            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
-                        }).then(function(res) {
-                            return res.json().then(function(d) {
-                                if (!res.ok) throw new Error(d.error ? d.error.message : "Error");
-                                return d;
-                            });
-                        }).then(function(d) {
-                            var text = d.candidates[0].content.parts[0].text;
-                            var json = JSON.parse(text.replace(/```json/g, '').replace(/```/g, '').trim());
-                            document.getElementById('scan-loader').classList.add('hidden');
-                            document.getElementById('order-form').classList.remove('hidden');
-                            document.getElementById('customerName').value = json.customerName || '';
-                            document.getElementById('phone').value = json.phone || '';
-                            document.getElementById('address').value = json.address || '';
-                            document.getElementById('quoteNumber').value = json.quoteNumber || '';
-                            document.getElementById('amount').value = String(json.amount || '').replace(/[^0-9]/g, '') || '';
-                        }).catch(function(err) {
-                            console.log("Step " + step + " failed: " + err.message);
-                            step++; callAI();
+                    var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=' + key;
+                    
+                    fetch(url, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+                    }).then(function(res) {
+                        return res.json().then(function(d) {
+                            if (!res.ok) {
+                                var msg = d.error ? (d.error.status + ": " + d.error.message) : "Unknown Error";
+                                localStorage.setItem('last_ai_error', msg);
+                                throw new Error(msg);
+                            }
+                            return d;
                         });
-                    }
-                    callAI();
+                    }).then(function(d) {
+                        var text = d.candidates[0].content.parts[0].text;
+                        var json = JSON.parse(text.replace(/```json/g, '').replace(/```/g, '').trim());
+                        document.getElementById('scan-loader').classList.add('hidden');
+                        document.getElementById('order-form').classList.remove('hidden');
+                        document.getElementById('customerName').value = json.customerName || '';
+                        document.getElementById('phone').value = json.phone || '';
+                        document.getElementById('address').value = json.address || '';
+                        document.getElementById('quoteNumber').value = json.quoteNumber || '';
+                        document.getElementById('amount').value = String(json.amount || '').replace(/[^0-9]/g, '') || '';
+                    }).catch(function(err) {
+                        document.getElementById('scan-loader').classList.add('hidden');
+                        document.getElementById('error-box').classList.remove('hidden');
+                        document.getElementById('error-msg').textContent = "GOOGLE ERROR:\n" + err.message;
+                    });
                 };
             };
         }
