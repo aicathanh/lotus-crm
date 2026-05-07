@@ -343,50 +343,54 @@ async function scanImageWithGemini(base64Image, mimeType) {
     const key = (localStorage.getItem('lotus_gemini_key') || '').trim();
     if (!key) throw new Error("Chưa có API Key");
 
-    // Master Strategy: Thử mọi con đường có thể để chạm tới Google
-    const attempts = [
-        { ver: 'v1', mod: 'gemini-1.5-flash' },
-        { ver: 'v1beta', mod: 'gemini-1.5-flash' },
-        { ver: 'v1beta', mod: 'gemini-1.5-flash-latest' },
-        { ver: 'v1', mod: 'gemini-1.5-pro' }
-    ];
-
-    let lastError = "Không thể kết nối AI";
-
-    for (const opt of attempts) {
-        try {
-            const url = `https://generativelanguage.googleapis.com/${opt.ver}/models/${opt.mod}:generateContent?key=${key}`;
-            
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [
-                        { text: "Bạn là chuyên gia bóc tách báo giá. Trích xuất JSON: customerName, phone, address, quoteNumber, amount (số)" },
-                        { inlineData: { mimeType: mimeType, data: base64Image } }
-                    ] }]
-                })
-            });
-
-            if (response.ok) {
-                const json = await response.json();
-                if (json.candidates && json.candidates[0]) {
-                    let text = json.candidates[0].content.parts[0].text;
-                    text = text.replace(/```json/g, '').replace(/```/g, '').trim();
-                    return JSON.parse(text);
-                }
-            } else {
-                const errData = await response.json().catch(() => ({}));
-                lastError = errData.error?.message || response.statusText;
-                console.warn(`Lỗi tại ${opt.ver}/${opt.mod}:`, lastError);
-            }
-        } catch (e) {
-            lastError = e.message;
-            console.warn(`Lỗi kết nối ${opt.ver}/${opt.mod}:`, e);
+    // 1. CHIẾN THUẬT MASTER: Tự động dò tìm danh sách model mà API Key này được phép dùng
+    let availableModels = [];
+    try {
+        const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+        if (listRes.ok) {
+            const listData = await listRes.json();
+            availableModels = listData.models.filter(m => m.supportedGenerationMethods.includes('generateContent'));
         }
+    } catch(e) { console.warn("Probe failed", e); }
+
+    // 2. Chọn model tốt nhất có sẵn (Ưu tiên Flash 1.5 -> Pro 1.5 -> Vision 1.0)
+    const bestModel = availableModels.find(m => m.name.includes('gemini-1.5-flash')) || 
+                      availableModels.find(m => m.name.includes('gemini-1.5-pro')) || 
+                      availableModels.find(m => m.name.includes('gemini-pro-vision')) ||
+                      availableModels.find(m => m.name.includes('flash')) ||
+                      (availableModels.length > 0 ? availableModels[0] : null);
+
+    const modelName = bestModel ? bestModel.name.split('/').pop() : 'gemini-1.5-flash';
+    const version = bestModel ? 'v1beta' : 'v1'; // Ưu tiên v1beta nếu probe thành công
+
+    try {
+        const url = `https://generativelanguage.googleapis.com/${version}/models/${modelName}:generateContent?key=${key}`;
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [
+                    { text: "Đọc ảnh báo giá và trả về JSON: customerName, phone, address, quoteNumber, amount (số)" },
+                    { inlineData: { mimeType: mimeType, data: base64Image } }
+                ] }]
+            })
+        });
+
+        if (response.ok) {
+            const json = await response.json();
+            if (json.candidates && json.candidates[0]) {
+                let text = json.candidates[0].content.parts[0].text;
+                text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                return JSON.parse(text);
+            }
+        } else {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.error?.message || "Lỗi không xác định từ Google");
+        }
+    } catch (e) {
+        throw new Error(e.message || "Không thể kết nối AI");
     }
-    
-    throw new Error(lastError);
 }
 
 orderForm.addEventListener('submit', e => {
