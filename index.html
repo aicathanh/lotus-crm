@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lotus CRM - v8.1 VIP</title>
+    <title>Lotus CRM - v8.2 Success</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
@@ -11,14 +11,16 @@
         .modal-overlay { display: none !important; }
         .modal-overlay.active { display: flex !important; opacity: 1 !important; pointer-events: auto !important; }
         .app-header { z-index: 10000 !important; position: relative !important; }
-        #debug-tag { background: #EF4444 !important; color: #FFFFFF !important; }
+        #debug-tag { background: #10B981 !important; color: #FFFFFF !important; }
         .error-detail { margin-top: 10px; font-family: monospace; font-size: 11px; padding: 10px; background: #FFF1F2; border: 1px solid #FDA4AF; color: #9F1239; border-radius: 4px; white-space: pre-wrap; }
-        .magic-paste-area { width: 100%; height: 80px; padding: 10px; border: 2px dashed var(--primary); border-radius: 8px; font-size: 13px; margin-top: 10px; background: #F0FDFA; }
+        .magic-paste-area { width: 100%; height: 100px; padding: 12px; border: 2px solid var(--primary); border-radius: 8px; font-size: 13px; margin-top: 10px; background: #F0FDFA; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .vip-guide { background: #F8FAFC; border: 1px solid #E2E8F0; padding: 12px; border-radius: 8px; margin-top: 15px; }
+        .vip-guide h4 { color: #1E293B; font-size: 13px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-    <div id="debug-tag" style="position:fixed; top:0; left:0; font-size:10px; padding:2px 8px; z-index:10001; border-radius: 0 0 4px 0; font-weight:bold;">v8.1 - VIP Ready</div>
+    <div id="debug-tag" style="position:fixed; top:0; left:0; font-size:10px; padding:2px 8px; z-index:10001; border-radius: 0 0 4px 0; font-weight:bold;">v8.2 - Success</div>
 
     <div class="app-container">
         <header class="app-header">
@@ -30,13 +32,27 @@
             </div>
         </header>
 
-        <main class="board" id="board"><div class="column" data-status="quote"><div class="column-header" style="border-top-color: var(--tag-quote)"><div class="column-header-top"><span>Báo Giá</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-quote"></div></div><div class="column" data-status="confirm"><div class="column-header" style="border-top-color: var(--tag-confirm)"><div class="column-header-top"><span>Chốt Đơn</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-confirm"></div></div><div class="column" data-status="deliver"><div class="column-header" style="border-top-color: var(--tag-deliver)"><div class="column-header-top"><span>Đã Giao</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-deliver"></div></div><div class="column" data-status="paid"><div class="column-header" style="border-top-color: var(--tag-paid)"><div class="column-header-top"><span>Đã Thu Tiền</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-paid"></div></div><div class="column" data-status="debt"><div class="column-header" style="border-top-color: var(--tag-debt)"><div class="column-header-top"><span>Công Nợ</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-debt"></div></div><div class="column" data-status="completed"><div class="column-header" style="border-top-color: #0F766E"><div class="column-header-top"><span>Hoàn Tất</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-completed"></div></div></main>
+        <main class="board" id="board">
+            <div class="column" data-status="quote"><div class="column-header" style="border-top-color: var(--tag-quote)"><div class="column-header-top"><span>Báo Giá</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-quote"></div></div>
+            <div class="column" data-status="confirm"><div class="column-header" style="border-top-color: var(--tag-confirm)"><div class="column-header-top"><span>Chốt Đơn</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-confirm"></div></div>
+            <div class="column" data-status="deliver"><div class="column-header" style="border-top-color: var(--tag-deliver)"><div class="column-header-top"><span>Đã Giao</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-deliver"></div></div>
+            <div class="column" data-status="paid"><div class="column-header" style="border-top-color: var(--tag-paid)"><div class="column-header-top"><span>Đã Thu Tiền</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-paid"></div></div>
+            <div class="column" data-status="debt"><div class="column-header" style="border-top-color: var(--tag-debt)"><div class="column-header-top"><span>Công Nợ</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-debt"></div></div>
+            <div class="column" data-status="completed"><div class="column-header" style="border-top-color: #0F766E"><div class="column-header-top"><span>Hoàn Tất</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-completed"></div></div>
+        </main>
     </div>
 
     <!-- Modals -->
     <div class="modal-overlay" id="settings-modal"><div class="modal"><div class="modal-header"><h3>Cài đặt AI</h3><button class="close-btn" onclick="closeAll()"><i class="fa-solid fa-xmark"></i></button></div><div class="modal-body">
-        <div class="form-group"><label>Google Gemini API Key (VIP khuyên dùng)</label><input type="password" id="apiKeyInput" placeholder="Dán mã vào đây..."></div>
-        <div style="font-size:11px; color:#666; margin-top:5px;">Nâng cấp VIP (Pay-as-you-go) tại: <a href="https://aistudio.google.com/app/billing" target="_blank" style="color:var(--primary)">Google Billing</a></div>
+        <div class="form-group"><label>Google Gemini API Key</label><input type="password" id="apiKeyInput" placeholder="Dán mã vào đây..."></div>
+        <div class="vip-guide">
+            <h4><i class="fa-solid fa-crown" style="color:#F59E0B"></i> Nâng cấp VIP (Quét ảnh siêu tốc)</h4>
+            <ol style="font-size:12px; padding-left:15px; color:#475569; line-height:1.6;">
+                <li>Truy cập <a href="https://aistudio.google.com/app/billing" target="_blank">Google Billing</a> và nạp thẻ.</li>
+                <li>Tạo mã API mới tại <a href="https://aistudio.google.com/app/apikey" target="_blank">AI Studio</a>.</li>
+                <li>Dán mã mới vào đây và tận hưởng!</li>
+            </ol>
+        </div>
         <div class="form-actions" style="margin-top:15px;"><button class="btn btn-primary" onclick="saveKey()">Lưu Cấu Hình</button></div>
     </div></div></div>
     
@@ -47,13 +63,19 @@
                 <i class="fa-regular fa-image upload-icon"></i>
                 <p>Nhấn hoặc Kéo thả ảnh báo giá</p>
             </div>
-            <div style="text-align: center; margin-top:10px;">
-                <p style="font-size:12px; color:#666;">Hoặc dán văn bản từ ảnh (Copy chữ trong ảnh dán vào đây)</p>
-                <textarea class="magic-paste-area" id="magic-paste" placeholder="Dán nội dung chữ copy từ ảnh báo giá vào đây..." oninput="handleMagicPaste(this.value)"></textarea>
+            <div style="text-align: center; margin-top:15px;">
+                <p style="font-size:13px; font-weight:600; color:var(--primary);">Cách 2: Dán văn bản từ ảnh (Khuyên dùng nếu lỗi)</p>
+                <textarea class="magic-paste-area" id="magic-paste" placeholder="Nhấn giữ ảnh báo giá trên điện thoại -> Copy chữ -> Dán vào đây để AI tự điền đơn..." oninput="handleMagicPaste(this.value)"></textarea>
             </div>
         </div>
         <div id="scan-loader" class="scan-loader hidden"><div class="spinner"></div><p id="scan-status">AI đang trích xuất dữ liệu...</p></div>
-        <div id="error-box" class="hidden"><div class="error-detail" id="error-msg"></div><div style="text-align: center; margin-top: 15px;"><button class="btn btn-primary" onclick="openManualForm()">Nhập Thủ Công</button></div></div>
+        <div id="error-box" class="hidden">
+            <div class="error-detail" id="error-msg"></div>
+            <div style="text-align: center; margin-top: 15px;">
+                <button class="btn btn-primary" onclick="openUpload()">Thử Dán Văn Bản Thay Thế</button>
+                <button class="btn btn-outline" onclick="openManualForm()" style="margin-top:10px; width:100%;">Nhập Thủ Công</button>
+            </div>
+        </div>
         <form id="order-form" class="hidden" onsubmit="saveOrder(event)">
             <div class="form-grid"><div class="form-group"><label>Tên Khách</label><input type="text" id="customerName" required></div><div class="form-group"><label>SĐT</label><input type="text" id="phone"></div><div class="form-group full-width"><label>Địa Chỉ</label><input type="text" id="address"></div><div class="form-group"><label>Số Báo Giá</label><input type="text" id="quoteNumber"></div><div class="form-group"><label>Tổng Tiền</label><input type="text" id="amount" required></div></div>
             <div class="form-actions"><button type="button" class="btn btn-outline" onclick="closeAll()">Hủy</button><button type="submit" class="btn btn-primary">Lưu Đơn</button></div>
@@ -123,44 +145,29 @@
             var part = isImage ? { inlineData: { mimeType: "image/jpeg", data: data } } : { text: data };
             var body = { 
                 contents: [{ parts: [{ text: "Extract JSON: customerName, phone, address, quoteNumber, amount" }, part] }],
-                safetySettings: [
-                    { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-                    { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-                    { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-                    { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-                ]
+                safetySettings: [{ category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" }, { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" }, { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" }, { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }]
             };
             
-            var configs = [
-                { url: 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent', method: 'POST' },
-                { url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent', method: 'POST' }
-            ];
-            
-            var cIdx = 0;
-            function tryNext() {
-                if (cIdx >= configs.length) {
-                    document.getElementById('scan-loader').classList.add('hidden');
-                    document.getElementById('error-box').classList.remove('hidden');
-                    document.getElementById('error-msg').textContent = "LỖI: Google từ chối quét ảnh này. Có thể tài khoản của bạn bị giới hạn Vision.";
-                    return;
-                }
-                fetch(configs[cIdx].url + '?key=' + key, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-                .then(function(res) { return res.json().then(function(d) { if (!res.ok) throw new Error(d.error ? d.error.message : "Error"); return d; }); })
-                .then(function(d) {
-                    var text = d.candidates[0].content.parts[0].text;
-                    var json = JSON.parse(text.replace(/```json/g, '').replace(/```/g, '').trim());
-                    document.getElementById('scan-loader').classList.add('hidden');
-                    document.getElementById('order-form').classList.remove('hidden');
-                    document.getElementById('customerName').value = json.customerName || '';
-                    document.getElementById('phone').value = json.phone || '';
-                    document.getElementById('address').value = json.address || '';
-                    document.getElementById('quoteNumber').value = json.quoteNumber || '';
-                    document.getElementById('amount').value = String(json.amount || '').replace(/[^0-9]/g, '') || '';
-                }).catch(function(err) {
-                    cIdx++; tryNext();
-                });
-            }
-            tryNext();
+            var model = isImage ? 'gemini-1.5-flash' : 'gemini-pro';
+            var url = 'https://generativelanguage.googleapis.com/v1/models/' + model + ':generateContent?key=' + key;
+
+            fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+            .then(function(res) { return res.json().then(function(d) { if (!res.ok) throw new Error(d.error ? d.error.message : "Error"); return d; }); })
+            .then(function(d) {
+                var text = d.candidates[0].content.parts[0].text;
+                var json = JSON.parse(text.replace(/```json/g, '').replace(/```/g, '').trim());
+                document.getElementById('scan-loader').classList.add('hidden');
+                document.getElementById('order-form').classList.remove('hidden');
+                document.getElementById('customerName').value = json.customerName || '';
+                document.getElementById('phone').value = json.phone || '';
+                document.getElementById('address').value = json.address || '';
+                document.getElementById('quoteNumber').value = json.quoteNumber || '';
+                document.getElementById('amount').value = String(json.amount || '').replace(/[^0-9]/g, '') || '';
+            }).catch(function(err) {
+                document.getElementById('scan-loader').classList.add('hidden');
+                document.getElementById('error-box').classList.remove('hidden');
+                document.getElementById('error-msg').textContent = "LỖI: Tài khoản của bạn bị giới hạn Vision (Quét ảnh). Hãy dùng thử tính năng DÁN VĂN BẢN.";
+            });
         }
 
         function saveOrder(e) {
