@@ -206,31 +206,36 @@
         function callAI(data, isImage) {
             var key = (localStorage.getItem('lotus_gemini_key') || '').trim();
             var scanStatus = document.getElementById('scan-status');
+            var loader = document.getElementById('scan-loader');
             
-            scanStatus.textContent = "Đang kiểm tra kết nối với Google...";
-            
-            fetch('https://generativelanguage.googleapis.com/v1beta/models?key=' + key)
-            .then(function(res) { return res.json(); })
-            .then(function(d) {
-                var models = d.models || [];
-                var targetModel = null;
-                if (isImage) {
-                    for(var i=0; i<models.length; i++) if (models[i].name.indexOf('1.5-flash') > -1) { targetModel = models[i].name; break; }
-                } else {
-                    for(var i=0; i<models.length; i++) if (models[i].name.indexOf('pro') > -1) { targetModel = models[i].name; break; }
-                }
-                if (!targetModel) targetModel = isImage ? 'models/gemini-1.5-flash' : 'models/gemini-pro';
-                
-                var part = isImage ? { inlineData: { mimeType: "image/jpeg", data: data } } : { text: data };
-                var body = { contents: [{ parts: [{ text: "Extract JSON: customerName, amount, products (string: Name(Qty), Name(Qty)...)" }, part] }], safetySettings: [{ category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" }, { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" }, { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" }, { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }] };
-                
+            if (!key) {
+                loader.classList.add('hidden');
+                document.getElementById('error-box').classList.remove('hidden');
+                document.getElementById('error-msg').textContent = "LỖI: Chưa có mã API. Hãy vào Cài đặt để dán mã vào.";
+                return;
+            }
+
+            scanStatus.textContent = "AI đang khởi động...";
+            loader.classList.remove('hidden');
+
+            function proceedWithModel(targetModel) {
                 scanStatus.textContent = "AI đang đọc báo giá...";
-                
+                var part = isImage ? { inlineData: { mimeType: "image/jpeg", data: data } } : { text: data };
+                var body = { 
+                    contents: [{ parts: [{ text: "Extract JSON: customerName, amount, products (string: Name(Qty), Name(Qty)...)" }, part] }], 
+                    safetySettings: [
+                        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" }, 
+                        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" }, 
+                        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" }, 
+                        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+                    ] 
+                };
+
                 var endpoints = [
-                    'https://generativelanguage.googleapis.com/v1/' + targetModel + ':generateContent?key=' + key,
-                    'https://generativelanguage.googleapis.com/v1beta/' + targetModel + ':generateContent?key=' + key
+                    'https://generativelanguage.googleapis.com/v1beta/' + targetModel + ':generateContent?key=' + key,
+                    'https://generativelanguage.googleapis.com/v1/' + targetModel + ':generateContent?key=' + key
                 ];
-                
+
                 var epIdx = 0;
                 function tryFetch() {
                     return fetch(endpoints[epIdx], { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -247,22 +252,42 @@
                         });
                     });
                 }
-                return tryFetch();
-            })
+
+                tryFetch().then(function(d) {
+                    var text = d.candidates[0].content.parts[0].text;
+                    var json = JSON.parse(text.replace(/```json/g, '').replace(/```/g, '').trim());
+                    loader.classList.add('hidden');
+                    document.getElementById('order-form').classList.remove('hidden');
+                    document.getElementById('customerName').value = json.customerName || '';
+                    document.getElementById('amount').value = String(json.amount || '').replace(/[^0-9]/g, '') || '';
+                    document.getElementById('products').value = json.products || '';
+                }).catch(function(err) {
+                    loader.classList.add('hidden');
+                    document.getElementById('error-box').classList.remove('hidden');
+                    document.getElementById('error-msg').textContent = "LỖI AI: " + err.message;
+                });
+            }
+
+            var discoveryTimeout = setTimeout(function() {
+                proceedWithModel(isImage ? 'models/gemini-1.5-flash' : 'models/gemini-pro');
+            }, 3000);
+
+            fetch('https://generativelanguage.googleapis.com/v1beta/models?key=' + key)
+            .then(function(res) { return res.json(); })
             .then(function(d) {
-                var text = d.candidates[0].content.parts[0].text;
-                var json = JSON.parse(text.replace(/```json/g, '').replace(/```/g, '').trim());
-                document.getElementById('scan-loader').classList.add('hidden');
-                document.getElementById('order-form').classList.remove('hidden');
-                document.getElementById('customerName').value = json.customerName || '';
-                document.getElementById('amount').value = String(json.amount || '').replace(/[^0-9]/g, '') || '';
-                document.getElementById('products').value = json.products || '';
-            }).catch(function(err) {
-                document.getElementById('scan-loader').classList.add('hidden');
-                document.getElementById('error-box').classList.remove('hidden');
-                var msg = "LỖI: ";
-                try { var e = JSON.parse(err.message); msg += e.message; } catch(x) { msg += err.message; }
-                document.getElementById('error-msg').textContent = msg;
+                clearTimeout(discoveryTimeout);
+                var models = d.models || [];
+                var targetModel = null;
+                if (isImage) {
+                    for(var i=0; i<models.length; i++) if (models[i].name.indexOf('1.5-flash') > -1) { targetModel = models[i].name; break; }
+                } else {
+                    for(var i=0; i<models.length; i++) if (models[i].name.indexOf('pro') > -1) { targetModel = models[i].name; break; }
+                }
+                proceedWithModel(targetModel || (isImage ? 'models/gemini-1.5-flash' : 'models/gemini-pro'));
+            })
+            .catch(function() {
+                clearTimeout(discoveryTimeout);
+                proceedWithModel(isImage ? 'models/gemini-1.5-flash' : 'models/gemini-pro');
             });
         }
 
