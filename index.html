@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lotus CRM v2.2 - AI Thông Thái</title>
+    <title>Lotus CRM v2.3 - Đồng Bộ Thông Minh</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -71,7 +71,7 @@
 </head>
 <body>
     <div class="app-header">
-        <div class="logo"><i class="fa-solid fa-leaf"></i> <span>Lotus CRM <span class="status-tag">AI Thông Thái v2.2</span></span></div>
+        <div class="logo"><i class="fa-solid fa-leaf"></i> <span>Lotus CRM <span class="status-tag">Đồng Bộ v2.3</span></span></div>
         <div class="header-actions">
             <button class="btn btn-sync" id="sync-btn" onclick="syncOnline()"><i class="fa-solid fa-cloud-arrow-up"></i> Cập nhật Online</button>
             <button class="btn btn-outline" onclick="openDashboard()"><i class="fa-solid fa-chart-pie"></i></button>
@@ -136,11 +136,30 @@
             document.getElementById('sync-loading').classList.remove('hidden');
             document.getElementById('sync-success').classList.add('hidden');
 
-            // Strategy: Clear and Re-upload all to ensure consistency
-            supabase.from('orders').delete().neq('id', '0').then(function() {
-                var rows = cards.map(function(c) { return { id: c.id, customerName: c.customerName, amount: String(c.amount), products: c.products, status: c.status, created_at: c.date }; });
-                if (rows.length === 0) { finishSync(); return; }
-                supabase.from('orders').insert(rows).then(finishSync);
+            // Strategy: Fetch remote, Merge with local, then Upsert back
+            supabase.from('orders').select('*').then(function(res) {
+                if (res.error) { alert('Lỗi tải: ' + res.error.message); return; }
+                
+                var cloudData = res.data || [];
+                var cloudMap = {};
+                cloudData.forEach(function(d) { cloudMap[d.id] = d; });
+                
+                // Merge local cards into cloudMap (local wins on ID conflict)
+                cards.forEach(function(c) { 
+                    cloudMap[c.id] = { id: c.id, customerName: c.customerName, amount: String(c.amount), products: c.products, status: c.status, created_at: c.date };
+                });
+
+                var mergedRows = Object.values(cloudMap);
+                supabase.from('orders').upsert(mergedRows).then(function(upRes) {
+                    if (upRes.error) { alert('Lỗi tải lên: ' + upRes.error.message); return; }
+                    
+                    // Update local cards with the merged result
+                    cards = mergedRows.map(function(r) {
+                        return { id: r.id, customerName: r.customerName, amount: parseInt(r.amount) || 0, products: r.products, status: r.status, date: r.created_at };
+                    });
+                    saveLocal();
+                    finishSync();
+                });
             });
         }
         function finishSync() { document.getElementById('sync-loading').classList.add('hidden'); document.getElementById('sync-success').classList.remove('hidden'); }
