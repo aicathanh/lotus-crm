@@ -1,3 +1,8 @@
+// Supabase Configuration
+const SUPABASE_URL = 'https://zbnnctvggpupdnjmydcu.supabase.co';
+const SUPABASE_KEY = 'sb_publishable__Uc7k0lfdHFzBjWT-3o36w_ydCDXOT8';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 // State Management
 const COLUMNS = [
     { id: 'quote', title: 'Báo Giá', color: 'var(--tag-quote)' },
@@ -8,7 +13,7 @@ const COLUMNS = [
     { id: 'completed', title: 'Hoàn Tất Đơn Hàng', color: '#0F766E' }
 ];
 
-let cards = JSON.parse(localStorage.getItem('lotus_crm_cards')) || [];
+let cards = [];
 
 // DOM Elements
 const boardEl = document.getElementById('board');
@@ -29,12 +34,82 @@ const fileInput = document.getElementById('file-input');
 const scanLoader = document.getElementById('scan-loader');
 const orderForm = document.getElementById('order-form');
 
-// Initialize Board
+// Initialize App
+async function initApp() {
+    await loadCardsFromCloud();
+    renderBoard();
+}
+
+async function loadCardsFromCloud() {
+    try {
+        const { data, error } = await supabase
+            .from('orders')
+            .select('*')
+            .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        // Migration logic: If cloud is empty, check local
+        if (data.length === 0) {
+            const localData = JSON.parse(localStorage.getItem('lotus_crm_cards')) || [];
+            if (localData.length > 0) {
+                for (const card of localData) {
+                    const dbCard = {
+                        id: card.id,
+                        customerName: card.customerName,
+                        phone: card.phone,
+                        address: card.address,
+                        quoteNumber: card.quoteNumber,
+                        amount: String(card.amount),
+                        status: card.status
+                    };
+                    await supabase.from('orders').insert(dbCard);
+                }
+                cards = localData;
+            }
+        } else {
+            // Map DB data back to local structure (amount string to number)
+            cards = data.map(item => ({
+                ...item,
+                amount: parseInt(item.amount.replace(/[^0-9]/g, '')) || 0,
+                date: item.created_at
+            }));
+        }
+    } catch (e) {
+        console.error("Cloud load error:", e);
+        cards = JSON.parse(localStorage.getItem('lotus_crm_cards')) || [];
+    }
+}
+
+async function syncCardToCloud(card) {
+    try {
+        const dbCard = {
+            id: card.id,
+            customerName: card.customerName,
+            phone: card.phone,
+            address: card.address,
+            quoteNumber: card.quoteNumber,
+            amount: String(card.amount),
+            status: card.status
+        };
+        await supabase.from('orders').upsert(dbCard);
+        localStorage.setItem('lotus_crm_cards', JSON.stringify(cards));
+    } catch (e) { console.error("Cloud sync error:", e); }
+}
+
+async function deleteCardFromCloud(id) {
+    try {
+        await supabase.from('orders').delete().eq('id', id);
+        localStorage.setItem('lotus_crm_cards', JSON.stringify(cards));
+    } catch (e) { console.error("Cloud delete error:", e); }
+}
+
+// Render Board
 function renderBoard() {
     boardEl.innerHTML = '';
     
     const searchTerm = searchInput.value.toLowerCase();
-    const filterMonth = monthFilter.value; // 'all', 'current', 'last'
+    const filterMonth = monthFilter.value;
     
     const now = new Date();
     const currentMonth = now.getMonth();
@@ -43,13 +118,11 @@ function renderBoard() {
     COLUMNS.forEach(col => {
         let colCards = cards.filter(c => c.status === col.id);
         
-        // Apply Month Filter
         if (filterMonth !== 'all') {
             colCards = colCards.filter(c => {
                 const d = new Date(c.date);
-                if (filterMonth === 'current') {
-                    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-                } else if (filterMonth === 'last') {
+                if (filterMonth === 'current') return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+                if (filterMonth === 'last') {
                     const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
                     const lastYear = currentMonth === 0 ? currentYear - 1 : currentYear;
                     return d.getMonth() === lastMonth && d.getFullYear() === lastYear;
@@ -58,7 +131,6 @@ function renderBoard() {
             });
         }
         
-        // Apply Search Filter
         if (searchTerm) {
             colCards = colCards.filter(c => 
                 c.customerName.toLowerCase().includes(searchTerm) ||
@@ -98,252 +170,158 @@ monthFilter.addEventListener('change', renderBoard);
 
 function createCardHTML(card) {
     const formattedDate = new Date(card.date).toLocaleDateString('vi-VN');
-    const formattedAmount = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(card.amount);
+    const formatCurrency = val => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
     
     return `
         <div class="card" draggable="true" data-id="${card.id}">
             <div class="card-header">
-                <div class="card-title">${card.customerName}</div>
-                <div class="card-id">${card.quoteNumber}</div>
+                <span class="card-quote">#${card.quoteNumber || '---'}</span>
+                <span class="card-date">${formattedDate}</span>
             </div>
-            <div class="card-amount">${formattedAmount}</div>
-            <div class="card-meta">
-                <i class="fa-solid fa-phone"></i> ${card.phone || 'N/A'}
+            <div class="card-customer">${card.customerName}</div>
+            <div class="card-info">
+                <span><i class="fa-solid fa-phone"></i> ${card.phone || '---'}</span>
             </div>
-            <div class="card-meta">
-                <i class="fa-regular fa-calendar"></i> ${formattedDate}
+            <div class="card-footer">
+                <div class="card-amount">${formatCurrency(card.amount)}</div>
+                <button class="btn-delete" onclick="deleteCard('${card.id}')"><i class="fa-solid fa-trash"></i></button>
             </div>
         </div>
     `;
 }
 
-// Drag and Drop Logic
 function setupDragAndDrop() {
     const cardEls = document.querySelectorAll('.card');
-    const colBodies = document.querySelectorAll('.column-body');
+    const columnBodies = document.querySelectorAll('.column-body');
     
     cardEls.forEach(card => {
-        card.addEventListener('dragstart', () => {
-            card.classList.add('dragging');
+        card.addEventListener('dragstart', () => card.classList.add('dragging'));
+        card.addEventListener('dragend', () => card.classList.remove('dragging'));
+    });
+    
+    columnBodies.forEach(body => {
+        body.addEventListener('dragover', e => {
+            e.preventDefault();
+            body.classList.add('drag-over');
         });
         
-        card.addEventListener('dragend', () => {
-            card.classList.remove('dragging');
-            
-            // Update status in state
-            const id = card.dataset.id;
-            const newStatus = card.closest('.column').dataset.status;
-            
-            const cardData = cards.find(c => c.id === id);
-            if (cardData && cardData.status !== newStatus) {
-                cardData.status = newStatus;
-                saveCards();
-                renderBoard(); // re-render to update counts
-            }
-        });
-    });
-    
-    colBodies.forEach(col => {
-        col.addEventListener('dragover', e => {
+        body.addEventListener('dragleave', () => body.classList.remove('drag-over'));
+        
+        body.addEventListener('drop', async e => {
             e.preventDefault();
+            body.classList.remove('drag-over');
+            const draggingCard = document.querySelector('.dragging');
+            const cardId = draggingCard.dataset.id;
+            const newStatus = body.parentElement.dataset.status;
             
-            // Check if dragging a file
-            const isFileDrag = e.dataTransfer.types && e.dataTransfer.types.includes('Files');
-            if (isFileDrag) {
-                if (col.parentElement.dataset.status === 'quote') {
-                    col.parentElement.classList.add('file-drag-over');
-                }
-                return;
-            }
-
-            const draggable = document.querySelector('.dragging');
-            if (!draggable) return;
-
-            const afterElement = getDragAfterElement(col, e.clientY);
-            if (afterElement == null) {
-                col.appendChild(draggable);
-            } else {
-                col.insertBefore(draggable, afterElement);
-            }
-        });
-
-        col.addEventListener('dragleave', e => {
-            col.parentElement.classList.remove('file-drag-over');
-        });
-
-        col.addEventListener('drop', e => {
-            col.parentElement.classList.remove('file-drag-over');
-            
-            // Handle file drop
-            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                e.preventDefault();
-                if (col.parentElement.dataset.status === 'quote') {
-                    openModal(uploadModal);
-                    handleFileUpload(e.dataTransfer.files[0]);
-                }
+            const cardIndex = cards.findIndex(c => c.id === cardId);
+            if (cardIndex > -1) {
+                cards[cardIndex].status = newStatus;
+                renderBoard();
+                await syncCardToCloud(cards[cardIndex]);
             }
         });
     });
 }
 
-function getDragAfterElement(container, y) {
-    const draggableElements = [...container.querySelectorAll('.card:not(.dragging)')];
-    
-    return draggableElements.reduce((closest, child) => {
-        const box = child.getBoundingClientRect();
-        const offset = y - box.top - box.height / 2;
-        if (offset < 0 && offset > closest.offset) {
-            return { offset: offset, element: child };
-        } else {
-            return closest;
-        }
-    }, { offset: Number.NEGATIVE_INFINITY }).element;
-}
-
-function saveCards() {
-    localStorage.setItem('lotus_crm_cards', JSON.stringify(cards));
-    updateDashboardStats();
-}
-
-// Dashboard Logic
+// Dashboard
 function updateDashboardStats() {
-    const totalQuote = cards.reduce((sum, c) => sum + c.amount, 0);
-    const totalCompleted = cards.filter(c => c.status === 'deliver' || c.status === 'paid').reduce((sum, c) => sum + c.amount, 0);
+    const totalRevenue = cards.filter(c => c.status === 'completed').reduce((sum, c) => sum + c.amount, 0);
     const totalDebt = cards.filter(c => c.status === 'debt').reduce((sum, c) => sum + c.amount, 0);
-
-    const formatCurrency = val => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
-
-    document.getElementById('stat-quote').textContent = formatCurrency(totalQuote);
-    document.getElementById('stat-completed').textContent = formatCurrency(totalCompleted);
-    document.getElementById('stat-debt').textContent = formatCurrency(totalDebt);
+    
+    document.getElementById('total-revenue').textContent = new Intl.NumberFormat('vi-VN').format(totalRevenue) + ' đ';
+    document.getElementById('total-debt').textContent = new Intl.NumberFormat('vi-VN').format(totalDebt) + ' đ';
 }
 
-// Modal and Upload Logic
-function openModal(modal) {
-    // Đóng tất cả modal khác trước khi mở mới để tránh chồng lấn
-    document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
-    modal.classList.add('active');
-}
-
-function closeModal(modal) {
-    modal.classList.remove('active');
-    if (modal === uploadModal) {
-        resetUploadForm();
+// Actions
+async function deleteCard(id) {
+    if (confirm('Bạn có chắc chắn muốn xoá đơn hàng này?')) {
+        cards = cards.filter(c => c.id !== id);
+        renderBoard();
+        await deleteCardFromCloud(id);
     }
 }
 
-function resetUploadForm() {
-    uploadArea.classList.remove('hidden');
-    scanLoader.classList.add('hidden');
+// Modals
+btnUpload.onclick = () => {
+    uploadModal.classList.add('active');
     orderForm.classList.add('hidden');
-    orderForm.reset();
-    document.getElementById('form-status-msg').textContent = '';
-}
+    scanLoader.classList.add('hidden');
+    uploadArea.classList.remove('hidden');
+};
 
-btnUpload.addEventListener('click', () => openModal(uploadModal));
-btnDashboard.addEventListener('click', () => openModal(dashboardModal));
-btnSettings.addEventListener('click', () => {
+btnDashboard.onclick = () => {
+    updateDashboardStats();
+    dashboardModal.classList.add('active');
+};
+
+btnSettings.onclick = () => {
     apiKeyInput.value = localStorage.getItem('lotus_gemini_key') || '';
-    openModal(settingsModal);
-});
-
-btnSaveKey.addEventListener('click', () => {
-    localStorage.setItem('lotus_gemini_key', apiKeyInput.value.trim());
-    closeModal(settingsModal);
-    alert('Đã lưu cấu hình AI thành công!');
-});
+    settingsModal.classList.add('active');
+};
 
 closeBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-        closeModal(btn.closest('.modal-overlay'));
-    });
+    btn.onclick = () => {
+        uploadModal.classList.remove('active');
+        dashboardModal.classList.remove('active');
+        settingsModal.classList.remove('active');
+    };
 });
 
-uploadArea.addEventListener('click', () => fileInput.click());
+window.onclick = e => {
+    if (e.target === uploadModal) uploadModal.classList.remove('active');
+    if (e.target === dashboardModal) dashboardModal.classList.remove('active');
+    if (e.target === settingsModal) settingsModal.classList.remove('active');
+};
 
-uploadArea.addEventListener('dragover', e => {
-    e.preventDefault();
-    uploadArea.style.borderColor = 'var(--primary)';
-    uploadArea.style.background = '#F0F9FF';
-});
+btnSaveKey.onclick = () => {
+    localStorage.setItem('lotus_gemini_key', apiKeyInput.value.trim());
+    settingsModal.classList.remove('active');
+    alert('Đã lưu cấu hình!');
+};
 
-uploadArea.addEventListener('dragleave', e => {
-    e.preventDefault();
-    uploadArea.style.borderColor = '#CBD5E1';
-    uploadArea.style.background = 'transparent';
-});
+// AI Upload
+uploadArea.onclick = () => fileInput.click();
 
-uploadArea.addEventListener('drop', e => {
-    e.preventDefault();
-    if (e.dataTransfer.files.length) {
-        handleFileUpload(e.dataTransfer.files[0]);
-    }
-});
-
-fileInput.addEventListener('change', e => {
-    if (e.target.files.length) {
-        handleFileUpload(e.target.files[0]);
-    }
-});
-
-async function handleFileUpload(file) {
-    if (!file.type.startsWith('image/')) {
-        alert('Vui lòng chọn file ảnh hợp lệ!');
-        return;
-    }
+fileInput.onchange = async e => {
+    const file = e.target.files[0];
+    if (!file) return;
     
     uploadArea.classList.add('hidden');
     scanLoader.classList.remove('hidden');
-    document.getElementById('form-status-msg').textContent = '';
     
-    const currentApiKey = (localStorage.getItem('lotus_gemini_key') || '').trim();
-    if (!currentApiKey) {
-        setTimeout(() => {
-            scanLoader.classList.add('hidden');
-            orderForm.classList.remove('hidden');
-            document.getElementById('form-status-msg').innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Bạn chưa nhập API Key. Nhấn ⚙️ để cài đặt.';
-        }, 800);
-        return;
-    }
-
     try {
-        const base64Image = await fileToBase64(file);
-        const data = await scanImageWithGemini(base64Image, file.type);
+        const base64 = await toBase64(file);
+        const data = await scanImageWithGemini(base64.split(',')[1], file.type);
         
         scanLoader.classList.add('hidden');
         orderForm.classList.remove('hidden');
         
         document.getElementById('customerName').value = data.customerName || '';
-        document.getElementById('customerPhone').value = data.phone || '';
-        document.getElementById('deliveryAddress').value = data.address || '';
+        document.getElementById('phone').value = data.phone || '';
+        document.getElementById('address').value = data.address || '';
         document.getElementById('quoteNumber').value = data.quoteNumber || '';
-        
         const cleanAmount = String(data.amount).replace(/[^0-9]/g, '');
-        document.getElementById('totalAmount').value = cleanAmount ? new Intl.NumberFormat('vi-VN').format(cleanAmount) : '';
-
-    } catch (e) {
-        console.error("Detailed AI Error:", e);
+        document.getElementById('amount').value = cleanAmount || '';
+        
+    } catch (err) {
+        alert("Lỗi AI: " + err.message);
         scanLoader.classList.add('hidden');
-        orderForm.classList.remove('hidden');
-        // Hiện lỗi thật sự để người dùng/tôi biết đường sửa
-        document.getElementById('form-status-msg').innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Lỗi AI: ${e.message}. <br><small>Vui lòng kiểm tra lại API Key hoặc nhập tay bên dưới.</small>`;
+        uploadArea.classList.remove('hidden');
     }
-}
+};
 
-function fileToBase64(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result.split(',')[1]);
-        reader.onerror = error => reject(error);
-    });
-}
+const toBase64 = file => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+});
 
 async function scanImageWithGemini(base64Image, mimeType) {
     const key = (localStorage.getItem('lotus_gemini_key') || '').trim();
     if (!key) throw new Error("Chưa có API Key");
 
-    // 1. Dò tìm danh sách model
     let availableModels = [];
     try {
         const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
@@ -351,83 +329,55 @@ async function scanImageWithGemini(base64Image, mimeType) {
             const listData = await listRes.json();
             availableModels = listData.models.filter(m => m.supportedGenerationMethods.includes('generateContent'));
         }
-    } catch(e) { console.warn("Probe failed", e); }
+    } catch(e) {}
 
-    // 2. Danh sách ưu tiên để thử (Lách tắc đường)
     const priorityModels = [
         availableModels.find(m => m.name.includes('gemini-1.5-flash')),
         availableModels.find(m => m.name.includes('gemini-1.5-pro')),
-        availableModels.find(m => m.name.includes('gemini-pro-vision')),
         availableModels[0]
-    ].filter(m => m); // Loại bỏ các model không tồn tại
-
-    let lastError = "Không thể kết nối AI";
+    ].filter(m => m);
 
     for (const model of priorityModels) {
-        const modelName = model.name.split('/').pop();
         try {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${key}`;
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model.name.split('/').pop()}:generateContent?key=${key}`;
             const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     contents: [{ parts: [
-                        { text: "Bạn là chuyên gia bóc tách dữ liệu. Trả về JSON: customerName, phone, address, quoteNumber, amount (số tiền)" },
-                        { inlineData: { mimeType: mimeType, data: base64Image } }
+                        { text: "Trích xuất JSON: customerName, phone, address, quoteNumber, amount (số)" },
+                        { inlineData: { mimeType, data: base64Image } }
                     ] }]
                 })
             });
-
             const data = await response.json();
-            
-            if (response.ok) {
-                if (data.candidates && data.candidates[0]) {
-                    let text = data.candidates[0].content.parts[0].text;
-                    text = text.replace(/```json/g, '').replace(/```/g, '').trim();
-                    return JSON.parse(text);
-                }
-            } else {
-                lastError = data.error?.message || "Lỗi AI";
-                // Nếu lỗi là "High Demand" hoặc "Overloaded", tiếp tục thử model tiếp theo trong danh sách
-                if (lastError.includes("high demand") || lastError.includes("overloaded") || response.status === 503) {
-                    console.warn(`Model ${modelName} đang bận, thử model tiếp theo...`);
-                    continue;
-                }
-                throw new Error(lastError);
+            if (response.ok && data.candidates) {
+                let text = data.candidates[0].content.parts[0].text;
+                return JSON.parse(text.replace(/```json/g, '').replace(/```/g, '').trim());
             }
-        } catch (e) {
-            lastError = e.message;
-            if (lastError.includes("high demand") || lastError.includes("overloaded")) continue;
-            throw e;
-        }
+        } catch (e) {}
     }
-    
-    throw new Error(lastError);
+    throw new Error("AI không thể đọc được ảnh này.");
 }
 
-orderForm.addEventListener('submit', e => {
+orderForm.onsubmit = async e => {
     e.preventDefault();
-    
-    // Lấy số tiền và loại bỏ các ký tự không phải số (dấu chấm, phẩy, đ)
-    const rawAmount = document.getElementById('totalAmount').value;
-    const cleanAmount = Number(rawAmount.replace(/[^0-9]/g, ''));
-
     const newCard = {
-        id: 'ORDER-' + Date.now().toString().slice(-6),
+        id: Date.now().toString(),
         customerName: document.getElementById('customerName').value,
-        phone: document.getElementById('customerPhone').value,
-        address: document.getElementById('deliveryAddress').value,
+        phone: document.getElementById('phone').value,
+        address: document.getElementById('address').value,
         quoteNumber: document.getElementById('quoteNumber').value,
-        amount: cleanAmount,
-        date: new Date().toISOString(),
-        status: 'quote'
+        amount: parseInt(document.getElementById('amount').value) || 0,
+        status: 'quote',
+        date: new Date().toISOString()
     };
-
-    cards.push(newCard);
-    saveCards();
+    
+    cards.unshift(newCard);
     renderBoard();
-    closeModal(uploadModal);
-});
+    uploadModal.classList.remove('active');
+    await syncCardToCloud(newCard);
+};
 
-// Init
-renderBoard();
+// Start
+initApp();
