@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lotus CRM - v7.1 Stable</title>
+    <title>Lotus CRM - v7.2 Final AI</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
@@ -11,12 +11,14 @@
         .modal-overlay { display: none !important; }
         .modal-overlay.active { display: flex !important; opacity: 1 !important; pointer-events: auto !important; }
         .app-header { z-index: 10000 !important; position: relative !important; }
-        #debug-tag { background: #3B82F6 !important; color: #FFFFFF !important; }
+        #debug-tag { background: #8B5CF6 !important; color: #FFFFFF !important; }
+        .btn-manual-big { width: 100%; margin-top: 15px; padding: 12px; font-weight: 600; background: #F3F4F6; border: 1px dashed #D1D5DB; color: #374151; cursor: pointer; border-radius: 8px; }
+        .btn-manual-big:hover { background: #E5E7EB; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-    <div id="debug-tag" style="position:fixed; top:0; left:0; font-size:10px; padding:2px 8px; z-index:10001; border-radius: 0 0 4px 0; font-weight:bold;">v7.1 - Stable</div>
+    <div id="debug-tag" style="position:fixed; top:0; left:0; font-size:10px; padding:2px 8px; z-index:10001; border-radius: 0 0 4px 0; font-weight:bold;">v7.2 - Final AI</div>
 
     <div class="app-container">
         <header class="app-header">
@@ -51,11 +53,9 @@
                 <i class="fa-regular fa-image upload-icon"></i>
                 <p>Nhấn hoặc Kéo thả ảnh báo giá</p>
             </div>
-            <div style="text-align: center; margin-top: 15px;">
-                <button class="btn btn-outline" onclick="openManualForm()">Hoặc Nhập Thủ Công</button>
-            </div>
+            <button class="btn-manual-big" onclick="openManualForm()"><i class="fa-solid fa-keyboard"></i> HOẶC NHẬP THỦ CÔNG (NHANH HƠN)</button>
         </div>
-        <div id="scan-loader" class="scan-loader hidden"><div class="spinner"></div><p>AI đang đọc ảnh...</p></div>
+        <div id="scan-loader" class="scan-loader hidden"><div class="spinner"></div><p id="scan-status">AI đang đọc ảnh...</p></div>
         <form id="order-form" class="hidden" onsubmit="saveOrder(event)">
             <div class="form-grid">
                 <div class="form-group"><label>Tên Khách</label><input type="text" id="customerName" required></div>
@@ -80,7 +80,7 @@
         function openSettings() { document.getElementById('apiKeyInput').value = localStorage.getItem('lotus_gemini_key') || ''; document.getElementById('settings-modal').classList.add('active'); }
         function openDashboard() { updateStats(); document.getElementById('dashboard-modal').classList.add('active'); }
         function openUpload() { document.getElementById('upload-modal').classList.add('active'); document.getElementById('upload-main-area').classList.remove('hidden'); document.getElementById('order-form').classList.add('hidden'); document.getElementById('scan-loader').classList.add('hidden'); }
-        function openManualForm() { document.getElementById('upload-main-area').classList.add('hidden'); document.getElementById('order-form').classList.remove('hidden'); document.getElementById('order-form').reset(); }
+        function openManualForm() { document.getElementById('upload-main-area').classList.add('hidden'); document.getElementById('scan-loader').classList.add('hidden'); document.getElementById('order-form').classList.remove('hidden'); document.getElementById('order-form').reset(); }
         function saveKey() { localStorage.setItem('lotus_gemini_key', document.getElementById('apiKeyInput').value.trim()); alert('Đã lưu!'); closeAll(); }
         function saveLocal() { localStorage.setItem('lotus_crm_cards', JSON.stringify(cards)); }
 
@@ -110,13 +110,18 @@
             if (!file) return;
             document.getElementById('upload-main-area').classList.add('hidden');
             document.getElementById('scan-loader').classList.remove('hidden');
+            document.getElementById('scan-status').textContent = "Đang gửi ảnh tới AI...";
+            
             var reader = new FileReader(); reader.readAsDataURL(file);
             reader.onload = function() {
                 var key = (localStorage.getItem('lotus_gemini_key') || '').trim();
                 var base64 = reader.result.split(',')[1];
-                var body = { contents: [{ parts: [{ text: "Trả về JSON: customerName, phone, address, quoteNumber, amount (số)" }, { inlineData: { mimeType: file.type, data: base64 } }] }] };
+                var body = { contents: [{ parts: [{ text: "Trích xuất JSON từ ảnh: customerName, phone, address, quoteNumber, amount (số)" }, { inlineData: { mimeType: file.type, data: base64 } }] }] };
                 
-                fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + key, {
+                // FIXED URL TO v1 STABLE
+                var url = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=' + key;
+                
+                fetch(url, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
                 }).then(function(res) {
                     if (!res.ok) return res.json().then(function(e) { throw new Error(e.error ? e.error.message : "Lỗi"); });
@@ -132,7 +137,7 @@
                     document.getElementById('quoteNumber').value = json.quoteNumber || '';
                     document.getElementById('amount').value = String(json.amount || '').replace(/[^0-9]/g, '') || '';
                 }).catch(function(err) {
-                    alert("AI đang bận, vui lòng nhập thủ công hoặc thử lại sau!");
+                    alert("Google AI đang bận trả lời người khác, bạn hãy Nhập thủ công cho nhanh nhé!");
                     openManualForm();
                 });
             };
