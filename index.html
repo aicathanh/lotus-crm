@@ -83,7 +83,6 @@
     <main class="board" id="board">
         <div class="column" data-status="quote"><div class="column-header"><div class="column-title"><span>Báo Giá</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-quote"></div></div>
         <div class="column" data-status="confirm"><div class="column-header"><div class="column-title"><span>Chốt Đơn</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-confirm"></div></div>
-        <div class="column" data-status="deliver"><div class="column-header"><div class="column-title"><span>Đã Giao</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-deliver"></div></div>
         <div class="column" data-status="paid"><div class="column-header"><div class="column-title"><span>Đã Thu Tiền</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-paid"></div></div>
         <div class="column" data-status="debt"><div class="column-header"><div class="column-title"><span>Công Nợ</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-debt"></div></div>
         <div class="column" data-status="completed"><div class="column-header"><div class="column-title"><span>Hoàn Tất</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-completed"></div></div>
@@ -114,7 +113,7 @@
         function saveLocal() { localStorage.setItem('lotus_crm_cards', JSON.stringify(cards)); renderBoard(); }
 
         function renderBoard() {
-            var states = ['quote', 'confirm', 'deliver', 'paid', 'debt', 'completed'];
+            var states = ['quote', 'confirm', 'paid', 'debt', 'completed'];
             states.forEach(function(st) {
                 var b = document.getElementById('col-' + st); if (!b) return; b.innerHTML = '';
                 var list = cards.filter(function(c) { return c.status === st; });
