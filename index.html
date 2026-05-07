@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lotus CRM - v7.5 Truth</title>
+    <title>Lotus CRM - v7.6 Discovery</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
@@ -11,13 +11,13 @@
         .modal-overlay { display: none !important; }
         .modal-overlay.active { display: flex !important; opacity: 1 !important; pointer-events: auto !important; }
         .app-header { z-index: 10000 !important; position: relative !important; }
-        #debug-tag { background: #000000 !important; color: #FFFFFF !important; cursor: pointer; }
-        .error-detail { margin-top: 10px; font-family: monospace; font-size: 11px; padding: 10px; background: #FFF1F2; border: 1px solid #FDA4AF; color: #9F1239; border-radius: 4px; white-space: pre-wrap; word-break: break-all; }
+        #debug-tag { background: #2563EB !important; color: #FFFFFF !important; }
+        .error-detail { margin-top: 10px; font-family: monospace; font-size: 11px; padding: 10px; background: #FFF1F2; border: 1px solid #FDA4AF; color: #9F1239; border-radius: 4px; white-space: pre-wrap; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-    <div id="debug-tag" onclick="alert('Debug Info: ' + localStorage.getItem('last_ai_error'))" style="position:fixed; top:0; left:0; font-size:10px; padding:2px 8px; z-index:10001; border-radius: 0 0 4px 0; font-weight:bold;">v7.5 - Truth</div>
+    <div id="debug-tag" style="position:fixed; top:0; left:0; font-size:10px; padding:2px 8px; z-index:10001; border-radius: 0 0 4px 0; font-weight:bold;">v7.6 - Discovery</div>
 
     <div class="app-container">
         <header class="app-header">
@@ -55,12 +55,7 @@
             <div style="text-align: center; margin-top:15px;"><button class="btn btn-outline" onclick="openManualForm()">Nhập Thủ Công</button></div>
         </div>
         <div id="scan-loader" class="scan-loader hidden"><div class="spinner"></div><p id="scan-status">AI đang đọc ảnh...</p></div>
-        <div id="error-box" class="hidden">
-            <div class="error-detail" id="error-msg"></div>
-            <div style="text-align: center; margin-top: 10px;">
-                <button class="btn btn-primary" onclick="openManualForm()">Chuyển Sang Nhập Thủ Công</button>
-            </div>
-        </div>
+        <div id="error-box" class="hidden"><div class="error-detail" id="error-msg"></div><div style="text-align: center; margin-top: 10px;"><button class="btn btn-primary" onclick="openManualForm()">Chuyển Sang Nhập Thủ Công</button></div></div>
         <form id="order-form" class="hidden" onsubmit="saveOrder(event)">
             <div class="form-grid">
                 <div class="form-group"><label>Tên Khách</label><input type="text" id="customerName" required></div>
@@ -72,8 +67,6 @@
             <div class="form-actions"><button type="button" class="btn btn-outline" onclick="closeAll()">Hủy</button><button type="submit" class="btn btn-primary">Lưu Đơn</button></div>
         </form>
     </div></div></div>
-
-    <div class="modal-overlay" id="dashboard-modal"><div class="modal modal-lg"><div class="modal-header"><h3>Thống Kê</h3><button class="close-btn" onclick="closeAll()"><i class="fa-solid fa-xmark"></i></button></div><div class="modal-body"><div class="dashboard-grid"><div class="stat-card"><div class="stat-info"><span class="stat-label">Báo Giá</span><h4 class="stat-value" id="stat-quote">0 đ</h4></div></div><div class="stat-card"><div class="stat-info"><span class="stat-label">Hoàn Tất</span><h4 class="stat-value" id="stat-completed">0 đ</h4></div></div><div class="stat-card"><div class="stat-info"><span class="stat-label">Công Nợ</span><h4 class="stat-value" id="stat-debt">0 đ</h4></div></div></div></div></div></div>
 
     <script>
         var SUPABASE_URL = 'https://zbnnctvggpupdnjmydcu.supabase.co';
@@ -115,59 +108,73 @@
             if (!file) return;
             document.getElementById('upload-main-area').classList.add('hidden');
             document.getElementById('scan-loader').classList.remove('hidden');
-            document.getElementById('error-box').classList.add('hidden');
+            document.getElementById('scan-status').textContent = "Đang tìm mô hình phù hợp...";
             
-            var reader = new FileReader(); reader.readAsDataURL(file);
-            reader.onload = function(e) {
-                var img = new Image(); img.src = e.target.result;
-                img.onload = function() {
-                    var canvas = document.createElement('canvas');
-                    var max = 1024; var w = img.width; var h = img.height;
-                    if (w > h) { if (w > max) { h *= max / w; w = max; } } else { if (h > max) { w *= max / h; h = max; } }
-                    canvas.width = w; canvas.height = h;
-                    var ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
-                    var base64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
-                    
-                    var key = (localStorage.getItem('lotus_gemini_key') || '').trim();
-                    var body = { contents: [{ parts: [{ text: "Extract JSON: customerName, phone, address, quoteNumber, amount" }, { inlineData: { mimeType: "image/jpeg", data: base64 } }] }] };
-                    
-                    var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=' + key;
-                    
-                    fetch(url, {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
-                    }).then(function(res) {
-                        return res.json().then(function(d) {
-                            if (!res.ok) {
-                                var msg = d.error ? (d.error.status + ": " + d.error.message) : "Unknown Error";
-                                localStorage.setItem('last_ai_error', msg);
-                                throw new Error(msg);
-                            }
-                            return d;
+            var key = (localStorage.getItem('lotus_gemini_key') || '').trim();
+            
+            // DISCOVERY STEP: List models to see what the user has access to
+            fetch('https://generativelanguage.googleapis.com/v1beta/models?key=' + key)
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                var models = data.models || [];
+                var targetModel = null;
+                // Prefer Flash, then Pro, then Vision
+                var preferred = ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-pro', 'gemini-pro-vision'];
+                for(var p=0; p<preferred.length; p++) {
+                    for(var m=0; m<models.length; m++) {
+                        if (models[m].name.indexOf(preferred[p]) > -1) {
+                            targetModel = models[m].name; break;
+                        }
+                    }
+                    if (targetModel) break;
+                }
+                
+                if (!targetModel) {
+                    // Fallback to manual check if list fails
+                    targetModel = 'models/gemini-1.5-flash';
+                }
+                
+                document.getElementById('scan-status').textContent = "Đang quét bằng " + targetModel.split('/').pop() + "...";
+                
+                var reader = new FileReader(); reader.readAsDataURL(file);
+                reader.onload = function(e) {
+                    var img = new Image(); img.src = e.target.result;
+                    img.onload = function() {
+                        var canvas = document.createElement('canvas');
+                        var max = 1024; var w = img.width; var h = img.height;
+                        if (w > h) { if (w > max) { h *= max / w; w = max; } } else { if (h > max) { w *= max / h; h = max; } }
+                        canvas.width = w; canvas.height = h;
+                        var ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
+                        var base64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+                        
+                        var body = { contents: [{ parts: [{ text: "Extract JSON: customerName, phone, address, quoteNumber, amount" }, { inlineData: { mimeType: "image/jpeg", data: base64 } }] }] };
+                        var url = 'https://generativelanguage.googleapis.com/v1beta/' + targetModel + ':generateContent?key=' + key;
+                        
+                        fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+                        .then(function(res) { return res.json(); })
+                        .then(function(d) {
+                            if (d.error) throw new Error(d.error.message);
+                            var text = d.candidates[0].content.parts[0].text;
+                            var json = JSON.parse(text.replace(/```json/g, '').replace(/```/g, '').trim());
+                            document.getElementById('scan-loader').classList.add('hidden');
+                            document.getElementById('order-form').classList.remove('hidden');
+                            document.getElementById('customerName').value = json.customerName || '';
+                            document.getElementById('phone').value = json.phone || '';
+                            document.getElementById('address').value = json.address || '';
+                            document.getElementById('quoteNumber').value = json.quoteNumber || '';
+                            document.getElementById('amount').value = String(json.amount || '').replace(/[^0-9]/g, '') || '';
+                        }).catch(function(err) {
+                            document.getElementById('scan-loader').classList.add('hidden');
+                            document.getElementById('error-box').classList.remove('hidden');
+                            document.getElementById('error-msg').textContent = "AI ERROR:\n" + err.message;
                         });
-                    }).then(function(d) {
-                        var text = d.candidates[0].content.parts[0].text;
-                        var json = JSON.parse(text.replace(/```json/g, '').replace(/```/g, '').trim());
-                        document.getElementById('scan-loader').classList.add('hidden');
-                        document.getElementById('order-form').classList.remove('hidden');
-                        document.getElementById('customerName').value = json.customerName || '';
-                        document.getElementById('phone').value = json.phone || '';
-                        document.getElementById('address').value = json.address || '';
-                        document.getElementById('quoteNumber').value = json.quoteNumber || '';
-                        document.getElementById('amount').value = String(json.amount || '').replace(/[^0-9]/g, '') || '';
-                    }).catch(function(err) {
-                        document.getElementById('scan-loader').classList.add('hidden');
-                        document.getElementById('error-box').classList.remove('hidden');
-                        document.getElementById('error-msg').textContent = "GOOGLE ERROR:\n" + err.message;
-                    });
+                    };
                 };
-            };
-        }
-
-        var ua = document.getElementById('upload-area');
-        if (ua) {
-            ua.ondragover = function(e) { e.preventDefault(); ua.classList.add('drag-over'); };
-            ua.ondragleave = function() { ua.classList.remove('drag-over'); };
-            ua.ondrop = function(e) { e.preventDefault(); ua.classList.remove('drag-over'); if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); };
+            }).catch(function(err) {
+                document.getElementById('scan-loader').classList.add('hidden');
+                document.getElementById('error-box').classList.remove('hidden');
+                document.getElementById('error-msg').textContent = "CONNECTION ERROR:\n" + err.message;
+            });
         }
 
         function saveOrder(e) {
