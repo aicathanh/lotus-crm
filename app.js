@@ -36,9 +36,10 @@ const orderForm = document.getElementById('order-form');
 
 // Initialize App
 async function initApp() {
-    renderBoard(); // Dựng cột trước
+    console.log("Initializing Lotus CRM Cloud...");
+    renderBoard(); // Render empty board first
     await loadCardsFromCloud();
-    renderBoard(); // Render lại khi có data
+    renderBoard();
 }
 
 async function loadCardsFromCloud() {
@@ -53,16 +54,16 @@ async function loadCardsFromCloud() {
         if (data && data.length > 0) {
             cards = data.map(item => ({
                 id: item.id,
-                customerName: item.customerName || 'Khách hàng ẩn danh',
+                customerName: item.customerName || 'Khách hàng',
                 phone: item.phone || '',
                 address: item.address || '',
                 quoteNumber: item.quoteNumber || '',
                 amount: parseInt(String(item.amount).replace(/[^0-9]/g, '')) || 0,
-                status: item.status,
+                status: item.status || 'quote',
                 date: item.created_at
             }));
         } else {
-            // Check migration
+            // Check for local migration
             const localData = JSON.parse(localStorage.getItem('lotus_crm_cards')) || [];
             if (localData.length > 0) {
                 cards = localData;
@@ -81,6 +82,7 @@ async function loadCardsFromCloud() {
         }
     } catch (e) {
         console.error("Cloud Error:", e);
+        // Fallback to local storage
         cards = JSON.parse(localStorage.getItem('lotus_crm_cards')) || [];
     }
 }
@@ -97,44 +99,46 @@ async function syncCardToCloud(card) {
             status: card.status
         });
         localStorage.setItem('lotus_crm_cards', JSON.stringify(cards));
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error("Sync Error:", e); }
 }
 
 async function deleteCardFromCloud(id) {
     try {
         await supabase.from('orders').delete().eq('id', id);
         localStorage.setItem('lotus_crm_cards', JSON.stringify(cards));
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error("Delete Error:", e); }
 }
 
 function renderBoard() {
     if (!boardEl) return;
     boardEl.innerHTML = '';
     
-    const searchTerm = searchInput.value.toLowerCase();
-    const filterMonth = monthFilter.value;
+    const searchTerm = (searchInput ? searchInput.value : '').toLowerCase();
+    const filterMonth = monthFilter ? monthFilter.value : 'all';
     const now = new Date();
     
     COLUMNS.forEach(col => {
         let colCards = cards.filter(c => c.status === col.id);
         
-        // Filters
+        // Month Filter
         if (filterMonth !== 'all') {
             colCards = colCards.filter(c => {
                 const d = new Date(c.date);
                 if (filterMonth === 'current') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
                 if (filterMonth === 'last') {
-                    const last = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                    return d.getMonth() === last.getMonth() && d.getFullYear() === last.getFullYear();
+                    const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                    return d.getMonth() === lastMonthDate.getMonth() && d.getFullYear() === lastMonthDate.getFullYear();
                 }
                 return true;
             });
         }
         
+        // Search Filter
         if (searchTerm) {
             colCards = colCards.filter(c => 
                 (c.customerName || '').toLowerCase().includes(searchTerm) ||
-                (c.phone || '').includes(searchTerm)
+                (c.phone || '').includes(searchTerm) ||
+                (c.quoteNumber || '').toLowerCase().includes(searchTerm)
             );
         }
         
@@ -222,13 +226,19 @@ function setupDragAndDrop() {
 }
 
 function updateDashboardStats() {
-    const totalRevenue = cards.filter(c => c.status === 'completed').reduce((sum, c) => sum + (c.amount || 0), 0);
+    const formatCurrency = val => new Intl.NumberFormat('vi-VN').format(val) + ' đ';
+    
+    const totalQuote = cards.filter(c => c.status === 'quote').reduce((sum, c) => sum + (c.amount || 0), 0);
+    const totalCompleted = cards.filter(c => c.status === 'completed' || c.status === 'paid').reduce((sum, c) => sum + (c.amount || 0), 0);
     const totalDebt = cards.filter(c => c.status === 'debt').reduce((sum, c) => sum + (c.amount || 0), 0);
     
-    const revEl = document.getElementById('total-revenue');
-    const debtEl = document.getElementById('total-debt');
-    if (revEl) revEl.textContent = new Intl.NumberFormat('vi-VN').format(totalRevenue) + ' đ';
-    if (debtEl) debtEl.textContent = new Intl.NumberFormat('vi-VN').format(totalDebt) + ' đ';
+    const quoteEl = document.getElementById('stat-quote');
+    const completedEl = document.getElementById('stat-completed');
+    const debtEl = document.getElementById('stat-debt');
+    
+    if (quoteEl) quoteEl.textContent = formatCurrency(totalQuote);
+    if (completedEl) completedEl.textContent = formatCurrency(totalCompleted);
+    if (debtEl) debtEl.textContent = formatCurrency(totalDebt);
 }
 
 async function deleteCard(id) {
@@ -239,7 +249,7 @@ async function deleteCard(id) {
     }
 }
 
-// Event Listeners
+// UI Event Handlers
 if (btnUpload) btnUpload.onclick = () => {
     uploadModal.classList.add('active');
     orderForm.classList.add('hidden');
@@ -268,7 +278,7 @@ closeBtns.forEach(btn => {
 if (btnSaveKey) btnSaveKey.onclick = () => {
     localStorage.setItem('lotus_gemini_key', apiKeyInput.value.trim());
     settingsModal.classList.remove('active');
-    alert('Đã lưu cấu hình!');
+    alert('Đã lưu cấu hình AI!');
 };
 
 if (uploadArea) uploadArea.onclick = () => fileInput.click();
@@ -276,18 +286,23 @@ if (uploadArea) uploadArea.onclick = () => fileInput.click();
 if (fileInput) fileInput.onchange = async e => {
     const file = e.target.files[0];
     if (!file) return;
+    
     uploadArea.classList.add('hidden');
     scanLoader.classList.remove('hidden');
+    
     try {
         const base64 = await toBase64(file);
         const data = await scanImageWithGemini(base64.split(',')[1], file.type);
+        
         scanLoader.classList.add('hidden');
         orderForm.classList.remove('hidden');
+        
         document.getElementById('customerName').value = data.customerName || '';
         document.getElementById('phone').value = data.phone || '';
         document.getElementById('address').value = data.address || '';
         document.getElementById('quoteNumber').value = data.quoteNumber || '';
         document.getElementById('amount').value = String(data.amount).replace(/[^0-9]/g, '') || '';
+        
     } catch (err) {
         alert("Lỗi AI: " + err.message);
         scanLoader.classList.add('hidden');
@@ -305,6 +320,7 @@ const toBase64 = file => new Promise((resolve, reject) => {
 async function scanImageWithGemini(base64Image, mimeType) {
     const key = (localStorage.getItem('lotus_gemini_key') || '').trim();
     if (!key) throw new Error("Chưa có API Key");
+
     let availableModels = [];
     try {
         const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
@@ -313,11 +329,13 @@ async function scanImageWithGemini(base64Image, mimeType) {
             availableModels = listData.models.filter(m => m.supportedGenerationMethods.includes('generateContent'));
         }
     } catch(e) {}
+
     const priorityModels = [
         availableModels.find(m => m.name.includes('gemini-1.5-flash')),
         availableModels.find(m => m.name.includes('gemini-1.5-pro')),
         availableModels[0]
     ].filter(m => m);
+
     for (const model of priorityModels) {
         try {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${model.name.split('/').pop()}:generateContent?key=${key}`;
@@ -327,7 +345,7 @@ async function scanImageWithGemini(base64Image, mimeType) {
                 body: JSON.stringify({
                     contents: [{ parts: [
                         { text: "Trích xuất JSON: customerName, phone, address, quoteNumber, amount (số)" },
-                        { inlineData: { mimeType, data: base64Image } }
+                        { inlineData: { mimeType: mimeType, data: base64Image } }
                     ] }]
                 })
             });
@@ -338,7 +356,7 @@ async function scanImageWithGemini(base64Image, mimeType) {
             }
         } catch (e) {}
     }
-    throw new Error("AI đang bận, vui lòng thử lại.");
+    throw new Error("AI đang bận, vui lòng thử lại sau giây lát.");
 }
 
 if (orderForm) orderForm.onsubmit = async e => {
@@ -353,11 +371,15 @@ if (orderForm) orderForm.onsubmit = async e => {
         status: 'quote',
         date: new Date().toISOString()
     };
+    
     cards.unshift(newCard);
     renderBoard();
     uploadModal.classList.remove('active');
     await syncCardToCloud(newCard);
 };
 
+if (searchInput) searchInput.oninput = renderBoard;
+if (monthFilter) monthFilter.onchange = renderBoard;
+
 // Start App
-document.addEventListener('DOMContentLoaded', initApp);
+initApp();
