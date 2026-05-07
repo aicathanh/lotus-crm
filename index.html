@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lotus CRM - Insight v1.3</title>
+    <title>Lotus CRM v1.7 - Cache Buster</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -15,8 +15,9 @@
         body { background-color: var(--bg); color: var(--text-main); }
 
         .app-header { height: 70px; background: #FFF; border-bottom: 1px solid #E2E8F0; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; position: sticky; top: 0; z-index: 100; }
-        .logo { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 22px; color: var(--primary); letter-spacing: -0.5px; }
+        .logo { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 22px; color: var(--primary); }
         .logo i { color: #10B981; }
+        .version-tag { font-size: 10px; background: #F1F5F9; padding: 2px 6px; border-radius: 4px; margin-left: 8px; vertical-align: middle; }
 
         .header-actions { display: flex; gap: 12px; }
         .btn { padding: 10px 18px; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer; border: none; display: flex; align-items: center; gap: 8px; transition: all 0.2s; }
@@ -38,7 +39,7 @@
         .column-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
         .column-title span:first-child { font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.7; }
         .col-count { background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 700; }
-        .col-total { font-weight: 900; font-size: 26px; color: var(--primary); letter-spacing: -0.5px; }
+        .col-total { font-weight: 900; font-size: 26px; color: var(--primary); }
 
         .column-body { display: flex; flex-direction: column; gap: 14px; overflow-y: auto; flex-grow: 1; padding-bottom: 20px; }
         .card { background: #FFF; border-radius: 16px; padding: 18px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); cursor: grab; border: 1px solid transparent; transition: all 0.2s; }
@@ -48,34 +49,21 @@
         .card-price { font-size: 18px; font-weight: 800; color: var(--primary); margin-bottom: 4px; display: block; }
         .card-name { font-size: 14px; font-weight: 600; color: var(--text-main); margin-bottom: 8px; display: block; line-height: 1.4; }
         .card-footer { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #F1F5F9; padding-top: 12px; margin-top: 12px; }
-        .card-date { font-size: 11px; color: var(--text-sub); font-weight: 600; text-transform: uppercase; }
-        .btn-delete { color: #FDA4AF; border: none; background: none; cursor: pointer; padding: 4px; transition: color 0.2s; }
-        .btn-delete:hover { color: #EF4444; }
-
-        .column[data-status="quote"] .column-title span:first-child { color: var(--col-quote); }
-        .column[data-status="confirm"] .column-title span:first-child { color: var(--col-confirm); }
-        .column[data-status="deliver"] .column-title span:first-child { color: var(--col-deliver); }
-        .column[data-status="paid"] .column-title span:first-child { color: var(--col-paid); }
-        .column[data-status="debt"] .column-title span:first-child { color: var(--col-debt); }
-        .column[data-status="completed"] .column-title span:first-child { color: var(--col-completed); }
+        .card-date { font-size: 11px; color: var(--text-sub); font-weight: 600; }
+        .btn-delete { color: #FDA4AF; border: none; background: none; cursor: pointer; padding: 4px; }
 
         /* Dashboard Styles */
         .dashboard-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 24px; }
         .stat-card { background: #F8FAFC; padding: 20px; border-radius: 16px; border: 1px solid #E2E8F0; }
         .stat-label { font-size: 12px; font-weight: 700; color: var(--text-sub); text-transform: uppercase; margin-bottom: 8px; }
-        .stat-value { font-size: 28px; font-weight: 900; color: var(--primary); letter-spacing: -1px; }
-        .product-list { display: flex; flex-direction: column; gap: 10px; }
-        .product-item { display: flex; align-items: center; justify-content: space-between; padding: 12px; background: #FFF; border-radius: 10px; border: 1px solid #F1F5F9; }
-        .product-name { font-weight: 600; font-size: 14px; }
-        .product-qty { background: #F0FDF4; color: #15803D; padding: 2px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+        .stat-value { font-size: 28px; font-weight: 900; color: var(--primary); }
 
         .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
         .modal-overlay.active { display: flex; }
         .modal { background: #FFF; width: 100%; max-width: 600px; border-radius: 28px; padding: 32px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); max-height: 90vh; overflow-y: auto; }
         .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
-        .modal-header h3 { font-size: 22px; font-weight: 900; letter-spacing: -0.5px; }
-        .close-btn { background: #F1F5F9; border: none; width: 40px; height: 40px; border-radius: 12px; cursor: pointer; transition: all 0.2s; }
-        .close-btn:hover { background: #E2E8F0; }
+        .modal-header h3 { font-size: 22px; font-weight: 900; }
+        .close-btn { background: #F1F5F9; border: none; width: 40px; height: 40px; border-radius: 12px; cursor: pointer; }
 
         .form-group { margin-bottom: 20px; }
         .form-group label { display: block; font-size: 13px; font-weight: 800; margin-bottom: 8px; color: var(--text-sub); text-transform: uppercase; }
@@ -90,7 +78,7 @@
 </head>
 <body>
     <div class="app-header">
-        <div class="logo"><i class="fa-solid fa-leaf"></i> <span>Lotus CRM</span></div>
+        <div class="logo"><i class="fa-solid fa-leaf"></i> <span>Lotus CRM <span class="version-tag">v1.7</span></span></div>
         <div class="header-actions">
             <button class="btn btn-dashboard" onclick="openDashboard()"><i class="fa-solid fa-chart-pie"></i> Thống kê</button>
             <button class="btn btn-outline" onclick="openSettings()"><i class="fa-solid fa-gear"></i></button>
@@ -99,6 +87,7 @@
     </div>
 
     <main class="board" id="board">
+        <!-- Columns will be rendered by JS -->
         <div class="column" data-status="quote"><div class="column-header"><div class="column-title"><span>Báo Giá</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-quote"></div></div>
         <div class="column" data-status="confirm"><div class="column-header"><div class="column-title"><span>Chốt Đơn</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-confirm"></div></div>
         <div class="column" data-status="deliver"><div class="column-header"><div class="column-title"><span>Đã Giao</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-deliver"></div></div>
@@ -114,9 +103,7 @@
             <div class="stat-card"><div class="stat-label">Tổng số đơn</div><div class="stat-value" id="dash-orders">0</div></div>
         </div>
         <h4 style="font-weight:800; margin-bottom:15px; font-size:16px;">Sản phẩm bán chạy nhất</h4>
-        <div class="product-list" id="dash-products">
-            <p style="font-size:13px; color:#666; font-style:italic;">Chưa có dữ liệu sản phẩm. Hãy quét báo giá mới để AI bắt đầu thống kê!</p>
-        </div>
+        <div class="product-list" id="dash-products"></div>
     </div></div></div>
 
     <div class="modal-overlay" id="settings-modal"><div class="modal"><div class="modal-header"><h3>Cài đặt AI</h3><button class="close-btn" onclick="closeAll()"><i class="fa-solid fa-xmark"></i></button></div><div class="modal-body">
@@ -131,13 +118,22 @@
                 <i class="fa-regular fa-image" style="font-size: 48px; color: var(--col-quote); margin-bottom: 16px;"></i>
                 <p style="font-weight: 700; font-size:16px;">Chọn ảnh báo giá</p>
             </div>
-            <div class="form-group"><label>Dán văn bản từ ảnh (Dự phòng)</label><textarea id="magic-paste" style="height:80px; resize:none;" placeholder="Dán nội dung chữ..." oninput="handleMagicPaste(this.value)"></textarea></div>
+            <div class="form-group"><label>Dán văn bản (Nếu quét ảnh chậm)</label><textarea id="magic-paste" style="height:60px; resize:none;" placeholder="Dán chữ..." oninput="handleMagicPaste(this.value)"></textarea></div>
         </div>
-        <div id="scan-loader" class="scan-loader hidden"><div class="spinner"></div><p id="scan-status" style="font-weight:700;">AI đang phân tích sản phẩm và khách hàng...</p></div>
+        <div id="scan-loader" class="scan-loader hidden">
+            <div class="spinner"></div>
+            <p id="scan-status" style="font-weight:700; color:var(--primary); margin-bottom:10px;">Đang xử lý...</p>
+            <p style="font-size:12px; color:var(--text-sub); margin-bottom:20px;">Quá trình này thường mất 5-15 giây</p>
+            <button class="btn btn-outline" style="margin:0 auto; font-size:12px;" onclick="openUpload()">Hủy & Thử lại</button>
+        </div>
+        <div id="error-box" class="hidden" style="text-align:center;">
+            <p id="error-msg" style="color:var(--col-debt); font-weight:600; margin-bottom:20px;"></p>
+            <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="openUpload()">Quay lại</button>
+        </div>
         <form id="order-form" class="hidden" onsubmit="saveOrder(event)">
-            <div class="form-group"><label>Tổng Tiền</label><input type="text" id="amount" style="font-size: 26px; font-weight: 900; color: #10B981;" required></div>
+            <div class="form-group"><label>Số Tiền</label><input type="text" id="amount" style="font-size: 26px; font-weight: 900; color: #10B981;" required></div>
             <div class="form-group"><label>Tên Khách Hàng</label><input type="text" id="customerName" required></div>
-            <div class="form-group"><label>Sản phẩm (AI tự bóc tách)</label><input type="text" id="products" placeholder="Ví dụ: Sơn phủ (2), Bột trét (5)..."></div>
+            <div class="form-group"><label>Sản phẩm</label><input type="text" id="products"></div>
             <div class="form-actions" style="display:flex; gap:12px; margin-top:20px;"><button type="button" class="btn btn-outline" style="flex:1; justify-content:center;" onclick="closeAll()">Hủy</button><button type="submit" class="btn btn-primary" style="flex:2; justify-content:center;">Lưu Đơn</button></div>
         </form>
     </div></div></div>
@@ -150,33 +146,15 @@
 
         function closeAll() { var ms = document.querySelectorAll('.modal-overlay'); for(var i=0; i<ms.length; i++) ms[i].classList.remove('active'); }
         function openSettings() { document.getElementById('apiKeyInput').value = localStorage.getItem('lotus_gemini_key') || ''; document.getElementById('settings-modal').classList.add('active'); }
-        function openUpload() { document.getElementById('upload-modal').classList.add('active'); document.getElementById('upload-main-area').classList.remove('hidden'); document.getElementById('order-form').classList.add('hidden'); document.getElementById('scan-loader').classList.add('hidden'); document.getElementById('magic-paste').value = ''; }
+        function openUpload() { document.getElementById('upload-modal').classList.add('active'); document.getElementById('upload-main-area').classList.remove('hidden'); document.getElementById('order-form').classList.add('hidden'); document.getElementById('scan-loader').classList.add('hidden'); document.getElementById('error-box').classList.add('hidden'); document.getElementById('magic-paste').value = ''; }
+        
         function openDashboard() {
-            var dash = document.getElementById('dashboard-modal'); dash.classList.add('active');
+            document.getElementById('dashboard-modal').classList.add('active');
             var total = 0; cards.forEach(function(c) { total += (Number(c.amount) || 0); });
             document.getElementById('dash-revenue').textContent = new Intl.NumberFormat('vi-VN').format(total) + ' đ';
             document.getElementById('dash-orders').textContent = cards.length;
-            
-            // Calculate Top Products
-            var pMap = {};
-            cards.forEach(function(c) {
-                if (c.products && c.products.length > 2) {
-                    var items = c.products.split(',');
-                    items.forEach(function(it) {
-                        var clean = it.trim(); if (!clean) return;
-                        var parts = clean.match(/(.+)\((\d+)\)/);
-                        if (parts) { var name = parts[1].trim(); var qty = parseInt(parts[2]); pMap[name] = (pMap[name] || 0) + qty; }
-                        else { pMap[clean] = (pMap[clean] || 0) + 1; }
-                    });
-                }
-            });
-            var pList = []; for (var name in pMap) pList.push({name: name, qty: pMap[name]});
-            pList.sort(function(a, b) { return b.qty - a.qty; });
-            var container = document.getElementById('dash-products');
-            if (pList.length === 0) container.innerHTML = '<p style="font-size:13px; color:#666; font-style:italic;">Chưa có dữ liệu sản phẩm. Hãy quét báo giá mới để AI bắt đầu thống kê!</p>';
-            else { container.innerHTML = ''; pList.slice(0, 5).forEach(function(p) { var d = document.createElement('div'); d.className = 'product-item'; d.innerHTML = '<span class="product-name">' + p.name + '</span><span class="product-qty">' + p.qty + ' đơn vị</span>'; container.appendChild(d); }); }
         }
-        
+
         function saveKey() { localStorage.setItem('lotus_gemini_key', document.getElementById('apiKeyInput').value.trim()); alert('Đã lưu!'); closeAll(); }
         function saveLocal() { localStorage.setItem('lotus_crm_cards', JSON.stringify(cards)); }
 
@@ -210,69 +188,37 @@
             var errorBox = document.getElementById('error-box');
             var errorMsg = document.getElementById('error-msg');
             
-            if (!key) {
-                loader.classList.add('hidden');
-                errorBox.classList.remove('hidden');
-                errorMsg.textContent = "LỖI: Chưa có mã API. Hãy vào Cài đặt để dán mã vào.";
-                return;
-            }
+            if (!key) { loader.classList.add('hidden'); errorBox.classList.remove('hidden'); errorMsg.textContent = "Chưa có API Key!"; return; }
 
             loader.classList.remove('hidden');
             errorBox.classList.add('hidden');
             document.getElementById('order-form').classList.add('hidden');
-            scanStatus.textContent = "AI đang đọc báo giá (Vui lòng đợi 5-10 giây)...";
+            scanStatus.textContent = "AI đang xử lý báo giá...";
 
             var targetModel = isImage ? 'models/gemini-1.5-flash' : 'models/gemini-pro';
             var part = isImage ? { inlineData: { mimeType: "image/jpeg", data: data } } : { text: data };
-            var body = { 
-                contents: [{ parts: [{ text: "Extract JSON: customerName, amount, products (string: Name(Qty), Name(Qty)...)" }, part] }], 
-                safetySettings: [
-                    { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" }, 
-                    { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" }, 
-                    { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" }, 
-                    { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-                ] 
-            };
+            var body = { contents: [{ parts: [{ text: "Extract JSON: customerName, amount, products" }, part] }] };
 
             var controller = new AbortController();
-            var timeoutId = setTimeout(function() { 
-                controller.abort(); 
-                loader.classList.add('hidden');
-                errorBox.classList.remove('hidden');
-                errorMsg.textContent = "LỖI: Kết nối quá chậm (Timeout). Vui lòng kiểm tra mạng và thử lại.";
-            }, 20000);
+            var timeoutId = setTimeout(function() { controller.abort(); loader.classList.add('hidden'); errorBox.classList.remove('hidden'); errorMsg.textContent = "Hết thời gian chờ. Thử lại nhé!"; }, 25000);
 
-            fetch('https://generativelanguage.googleapis.com/v1beta/' + targetModel + ':generateContent?key=' + key, { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify(body),
-                signal: controller.signal
-            })
+            fetch('https://generativelanguage.googleapis.com/v1beta/' + targetModel + ':generateContent?key=' + key, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: controller.signal })
             .then(function(res) { 
                 clearTimeout(timeoutId);
-                return res.json().then(function(d) { if (!res.ok) throw new Error(d.error ? d.error.message : "Lỗi API Google"); return d; });
+                return res.json().then(function(d) { if (!res.ok) throw new Error(d.error ? d.error.message : "Lỗi Google"); return d; });
             })
             .then(function(d) {
-                try {
-                    var rawText = d.candidates[0].content.parts[0].text;
-                    var cleanText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-                    var json = JSON.parse(cleanText);
-                    
-                    loader.classList.add('hidden');
-                    document.getElementById('order-form').classList.remove('hidden');
-                    document.getElementById('customerName').value = json.customerName || '';
-                    document.getElementById('amount').value = String(json.amount || '').replace(/[^0-9]/g, '') || '';
-                    document.getElementById('products').value = json.products || '';
-                } catch (e) {
-                    throw new Error("AI trả về dữ liệu không đúng định dạng. Hãy thử lại!");
-                }
+                var rawText = d.candidates[0].content.parts[0].text;
+                var json = JSON.parse(rawText.replace(/```json/g, '').replace(/```/g, '').trim());
+                loader.classList.add('hidden');
+                document.getElementById('order-form').classList.remove('hidden');
+                document.getElementById('customerName').value = json.customerName || '';
+                document.getElementById('amount').value = String(json.amount || '').replace(/[^0-9]/g, '');
+                document.getElementById('products').value = json.products || '';
             })
             .catch(function(err) {
-                clearTimeout(timeoutId);
-                if (err.name === 'AbortError') return;
-                loader.classList.add('hidden');
-                errorBox.classList.remove('hidden');
-                errorMsg.textContent = "LỖI: " + err.message;
+                clearTimeout(timeoutId); if (err.name === 'AbortError') return;
+                loader.classList.add('hidden'); errorBox.classList.remove('hidden'); errorMsg.textContent = "Lỗi: " + err.message;
             });
         }
 
