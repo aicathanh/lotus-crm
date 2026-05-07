@@ -3,21 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lotus CRM - v6.4 Final Boss</title>
+    <title>Lotus CRM - v6.5 Master Coder Returns</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <style>
-        /* CRITICAL OVERRIDE TO BREAK THE WALL */
         .modal-overlay { display: none !important; }
         .modal-overlay.active { display: flex !important; opacity: 1 !important; pointer-events: auto !important; }
         .app-header { z-index: 10000 !important; position: relative !important; }
-        #debug-tag { background: #A855F7 !important; color: white !important; }
+        #debug-tag { background: #000000 !important; color: #FFFFFF !important; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-    <div id="debug-tag" style="position:fixed; top:0; left:0; font-size:10px; padding:2px 8px; z-index:10001; border-radius: 0 0 4px 0; font-weight:bold;">v6.4 - Final Boss</div>
+    <div id="debug-tag" style="position:fixed; top:0; left:0; font-size:10px; padding:2px 8px; z-index:10001; border-radius: 0 0 4px 0; font-weight:bold;">v6.5 - Master Coder Returns</div>
 
     <div class="app-container">
         <header class="app-header">
@@ -25,18 +24,18 @@
             <div class="header-filters">
                 <div class="search-box">
                     <i class="fa-solid fa-magnifying-glass"></i>
-                    <input type="text" id="search-input" oninput="renderBoard()" placeholder="Tìm tên khách, sđt...">
+                    <input type="text" id="search-input" oninput="window.renderBoard()" placeholder="Tìm tên khách, sđt...">
                 </div>
-                <select id="month-filter" class="filter-select" onchange="renderBoard()">
+                <select id="month-filter" class="filter-select" onchange="window.renderBoard()">
                     <option value="all">Tất cả các tháng</option>
                     <option value="current">Tháng này</option>
                     <option value="last">Tháng trước</option>
                 </select>
             </div>
             <div class="header-actions">
-                <button class="btn btn-outline" onclick="openSettings()" title="Cài đặt AI"><i class="fa-solid fa-gear"></i></button>
-                <button class="btn btn-outline" onclick="openDashboard()"><i class="fa-solid fa-chart-pie"></i> Tổng hợp</button>
-                <button class="btn btn-primary" onclick="openUpload()"><i class="fa-solid fa-cloud-arrow-up"></i> Tải Báo Giá (AI)</button>
+                <button class="btn btn-outline" onclick="window.openSettings()" title="Cài đặt AI"><i class="fa-solid fa-gear"></i></button>
+                <button class="btn btn-outline" onclick="window.openDashboard()"><i class="fa-solid fa-chart-pie"></i> Tổng hợp</button>
+                <button class="btn btn-primary" onclick="window.openUpload()"><i class="fa-solid fa-cloud-arrow-up"></i> Tải Báo Giá (AI)</button>
             </div>
         </header>
 
@@ -50,80 +49,127 @@
         </main>
     </div>
 
-    <!-- Modals (Moved to bottom and hidden by default) -->
-    <div class="modal-overlay" id="settings-modal"><div class="modal"><div class="modal-header"><h3>Cài đặt AI</h3><button class="close-btn" onclick="closeAll()"><i class="fa-solid fa-xmark"></i></button></div><div class="modal-body"><div class="form-group"><label>Google Gemini API Key</label><input type="password" id="apiKeyInput" placeholder="Dán mã vào đây..."></div><div class="form-actions"><button class="btn btn-outline" onclick="closeAll()">Đóng</button><button class="btn btn-primary" onclick="saveKey()">Lưu Cấu Hình</button></div></div></div></div>
-    <div class="modal-overlay" id="upload-modal"><div class="modal"><div class="modal-header"><h3>Tải Báo Giá</h3><button class="close-btn" onclick="closeAll()"><i class="fa-solid fa-xmark"></i></button></div><div class="modal-body"><div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()"><input type="file" id="file-input" accept="image/*" hidden onchange="handleFile(this)"><i class="fa-regular fa-image upload-icon"></i><p>Nhấn để chọn ảnh báo giá</p></div><div id="scan-loader" class="scan-loader hidden"><div class="spinner"></div><p>AI đang phân tích...</p></div><form id="order-form" class="hidden" onsubmit="saveOrder(event)"><div class="form-grid"><div class="form-group"><label>Tên Khách</label><input type="text" id="customerName" required></div><div class="form-group"><label>SĐT</label><input type="text" id="phone"></div><div class="form-group full-width"><label>Địa Chỉ</label><input type="text" id="address"></div><div class="form-group"><label>Số Báo Giá</label><input type="text" id="quoteNumber"></div><div class="form-group"><label>Tổng Tiền</label><input type="text" id="amount" required></div></div><div class="form-actions"><button type="button" class="btn btn-outline" onclick="closeAll()">Hủy</button><button type="submit" class="btn btn-primary">Lưu Đơn</button></div></form></div></div></div>
-    <div class="modal-overlay" id="dashboard-modal"><div class="modal modal-lg"><div class="modal-header"><h3>Tổng Hợp</h3><button class="close-btn" onclick="closeAll()"><i class="fa-solid fa-xmark"></i></button></div><div class="modal-body"><div class="dashboard-grid"><div class="stat-card"><div class="stat-icon bg-blue"><i class="fa-solid fa-file-invoice-dollar"></i></div><div class="stat-info"><span class="stat-label">Báo Giá</span><h4 class="stat-value" id="stat-quote">0 đ</h4></div></div><div class="stat-card"><div class="stat-icon bg-green"><i class="fa-solid fa-check-double"></i></div><div class="stat-info"><span class="stat-label">Hoàn Tất</span><h4 class="stat-value" id="stat-completed">0 đ</h4></div></div><div class="stat-card"><div class="stat-icon bg-red"><i class="fa-solid fa-hand-holding-dollar"></i></div><div class="stat-info"><span class="stat-label">Công Nợ</span><h4 class="stat-value" id="stat-debt">0 đ</h4></div></div></div></div></div></div>
+    <!-- Modals -->
+    <div class="modal-overlay" id="settings-modal"><div class="modal"><div class="modal-header"><h3>Cài đặt AI</h3><button class="close-btn" onclick="window.closeAll()"><i class="fa-solid fa-xmark"></i></button></div><div class="modal-body"><div class="form-group"><label>Google Gemini API Key</label><input type="password" id="apiKeyInput" placeholder="Dán mã vào đây..."></div><div class="form-actions"><button class="btn btn-outline" onclick="window.closeAll()">Đóng</button><button class="btn btn-primary" onclick="window.saveKey()">Lưu Cấu Hình</button></div></div></div></div>
+    <div class="modal-overlay" id="upload-modal"><div class="modal"><div class="modal-header"><h3>Tải Báo Giá</h3><button class="close-btn" onclick="window.closeAll()"><i class="fa-solid fa-xmark"></i></button></div><div class="modal-body"><div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()"><input type="file" id="file-input" accept="image/*" hidden onchange="window.handleFile(this)"><i class="fa-regular fa-image upload-icon"></i><p>Nhấn để chọn ảnh báo giá</p></div><div id="scan-loader" class="scan-loader hidden"><div class="spinner"></div><p>AI đang phân tích...</p></div><form id="order-form" class="hidden" onsubmit="window.saveOrder(event)"><div class="form-grid"><div class="form-group"><label>Tên Khách</label><input type="text" id="customerName" required></div><div class="form-group"><label>SĐT</label><input type="text" id="phone"></div><div class="form-group full-width"><label>Địa Chỉ</label><input type="text" id="address"></div><div class="form-group"><label>Số Báo Giá</label><input type="text" id="quoteNumber"></div><div class="form-group"><label>Tổng Tiền</label><input type="text" id="amount" required></div></div><div class="form-actions"><button type="button" class="btn btn-outline" onclick="window.closeAll()">Hủy</button><button type="submit" class="btn btn-primary">Lưu Đơn</button></div></form></div></div></div>
+    <div class="modal-overlay" id="dashboard-modal"><div class="modal modal-lg"><div class="modal-header"><h3>Tổng Hợp</h3><button class="close-btn" onclick="window.closeAll()"><i class="fa-solid fa-xmark"></i></button></div><div class="modal-body"><div class="dashboard-grid"><div class="stat-card"><div class="stat-icon bg-blue"><i class="fa-solid fa-file-invoice-dollar"></i></div><div class="stat-info"><span class="stat-label">Báo Giá</span><h4 class="stat-value" id="stat-quote">0 đ</h4></div></div><div class="stat-card"><div class="stat-icon bg-green"><i class="fa-solid fa-check-double"></i></div><div class="stat-info"><span class="stat-label">Hoàn Tất</span><h4 class="stat-value" id="stat-completed">0 đ</h4></div></div><div class="stat-card"><div class="stat-icon bg-red"><i class="fa-solid fa-hand-holding-dollar"></i></div><div class="stat-info"><span class="stat-label">Công Nợ</span><h4 class="stat-value" id="stat-debt">0 đ</h4></div></div></div></div></div></div>
 
     <script>
+        console.log("REBIRTH v6.5 - REPAIRING SYNC");
+        
         const SUPABASE_URL = 'https://zbnnctvggpupdnjmydcu.supabase.co';
         const SUPABASE_KEY = 'sb_publishable__Uc7k0lfdHFzBjWT-3o36w_ydCDXOT8';
         let supabase = null;
         let cards = JSON.parse(localStorage.getItem('lotus_crm_cards')) || [];
 
-        window.closeAll = function() { document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active')); };
-        window.openSettings = function() { document.getElementById('apiKeyInput').value = localStorage.getItem('lotus_gemini_key') || ''; document.getElementById('settings-modal').classList.add('active'); };
-        window.openDashboard = function() { updateStats(); document.getElementById('dashboard-modal').classList.add('active'); };
-        window.openUpload = function() { document.getElementById('upload-modal').classList.add('active'); document.getElementById('order-form').classList.add('hidden'); document.getElementById('upload-area').classList.remove('hidden'); };
-        window.saveKey = function() { localStorage.setItem('lotus_gemini_key', document.getElementById('apiKeyInput').value.trim()); alert('Đã lưu!'); closeAll(); };
+        // REGISTER GLOBAL FUNCTIONS FIRST
+        window.closeAll = () => { document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active')); };
+        window.openSettings = () => { document.getElementById('apiKeyInput').value = localStorage.getItem('lotus_gemini_key') || ''; document.getElementById('settings-modal').classList.add('active'); };
+        window.openDashboard = () => { updateStats(); document.getElementById('dashboard-modal').classList.add('active'); };
+        window.openUpload = () => { document.getElementById('upload-modal').classList.add('active'); document.getElementById('order-form').classList.add('hidden'); document.getElementById('upload-area').classList.remove('hidden'); };
+        window.saveKey = () => { localStorage.setItem('lotus_gemini_key', document.getElementById('apiKeyInput').value.trim()); alert('Đã lưu!'); window.closeAll(); };
 
         window.renderBoard = function() {
-            const search = (document.getElementById('search-input')?.value || '').toLowerCase();
-            const filter = document.getElementById('month-filter')?.value || 'all';
-            const now = new Date();
-            ['quote', 'confirm', 'deliver', 'paid', 'debt', 'completed'].forEach(st => {
-                const b = document.getElementById(`col-${st}`); if (!b) return; b.innerHTML = '';
-                let list = cards.filter(c => c.status === st);
-                if (filter !== 'all') list = list.filter(c => { const d = new Date(c.date); return filter === 'current' ? d.getMonth() === now.getMonth() : (d.getMonth() === (now.getMonth() === 0 ? 11 : now.getMonth() - 1)); });
-                if (search) list = list.filter(c => (c.customerName || '').toLowerCase().includes(search) || (c.phone || '').includes(search));
-                const h = b.parentElement; const sum = list.reduce((a, c) => a + (Number(c.amount) || 0), 0);
-                h.querySelector('.col-count').textContent = list.length; h.querySelector('.col-total').textContent = new Intl.NumberFormat('vi-VN').format(sum) + ' đ';
-                list.forEach(c => {
-                    const d = document.createElement('div'); d.className = 'card'; d.draggable = true; d.dataset.id = c.id;
-                    d.innerHTML = `<div class="card-header"><span class="card-quote">#${c.quoteNumber || '---'}</span><span>${new Date(c.date).toLocaleDateString('vi-VN')}</span></div><div class="card-customer">${c.customerName}</div><div class="card-info"><i class="fa-solid fa-phone"></i> ${c.phone || '---'}</div><div class="card-footer"><div class="card-amount">${Number(c.amount).toLocaleString()} đ</div><button class="btn-delete" onclick="deleteCard('${c.id}')"><i class="fa-solid fa-trash"></i></button></div>`;
-                    d.ondragstart = () => d.classList.add('dragging'); d.ondragend = () => d.classList.remove('dragging'); b.appendChild(d);
+            try {
+                const search = (document.getElementById('search-input')?.value || '').toLowerCase();
+                const filter = document.getElementById('month-filter')?.value || 'all';
+                const now = new Date();
+                
+                ['quote', 'confirm', 'deliver', 'paid', 'debt', 'completed'].forEach(st => {
+                    const b = document.getElementById(`col-${st}`); if (!b) return;
+                    b.innerHTML = '';
+                    let list = cards.filter(c => c.status === st);
+                    if (filter !== 'all') {
+                        list = list.filter(c => {
+                            const d = new Date(c.date);
+                            return filter === 'current' ? d.getMonth() === now.getMonth() : (d.getMonth() === (now.getMonth() === 0 ? 11 : now.getMonth() - 1));
+                        });
+                    }
+                    if (search) list = list.filter(c => (c.customerName || '').toLowerCase().includes(search) || (c.phone || '').includes(search));
+
+                    const h = b.parentElement;
+                    const sum = list.reduce((a, c) => a + (Number(c.amount) || 0), 0);
+                    const countEl = h.querySelector('.col-count');
+                    const totalEl = h.querySelector('.col-total');
+                    if (countEl) countEl.textContent = list.length;
+                    if (totalEl) totalEl.textContent = new Intl.NumberFormat('vi-VN').format(sum) + ' đ';
+
+                    list.forEach(c => {
+                        const d = document.createElement('div'); d.className = 'card'; d.draggable = true; d.dataset.id = c.id;
+                        d.innerHTML = `<div class="card-header"><span class="card-quote">#${c.quoteNumber || '---'}</span><span>${new Date(c.date).toLocaleDateString('vi-VN')}</span></div><div class="card-customer">${c.customerName}</div><div class="card-info"><i class="fa-solid fa-phone"></i> ${c.phone || '---'}</div><div class="card-footer"><div class="card-amount">${Number(c.amount).toLocaleString()} đ</div><button class="btn-delete" onclick="window.deleteCard('${c.id}')"><i class="fa-solid fa-trash"></i></button></div>`;
+                        d.ondragstart = () => d.classList.add('dragging'); d.ondragend = () => d.classList.remove('dragging');
+                        b.appendChild(d);
+                    });
+
+                    b.ondragover = e => { e.preventDefault(); b.classList.add('drag-over'); };
+                    b.ondragleave = () => b.classList.remove('drag-over');
+                    b.ondrop = async e => {
+                        e.preventDefault(); b.classList.remove('drag-over');
+                        const drag = document.querySelector('.dragging');
+                        if (drag) {
+                            const id = drag.dataset.id; const idx = cards.findIndex(x => x.id === id);
+                            if (idx > -1) { cards[idx].status = st; saveLocal(); window.renderBoard(); if (supabase) await supabase.from('orders').update({status: st}).eq('id', id); }
+                        }
+                    };
                 });
-                b.ondragover = e => { e.preventDefault(); b.classList.add('drag-over'); };
-                b.ondrop = async e => { e.preventDefault(); b.classList.remove('drag-over'); const drag = document.querySelector('.dragging'); if (drag) { const id = drag.dataset.id; const idx = cards.findIndex(x => x.id === id); if (idx > -1) { cards[idx].status = st; localStorage.setItem('lotus_crm_cards', JSON.stringify(cards)); renderBoard(); if (supabase) await supabase.from('orders').update({status: st}).eq('id', id); } } };
-            });
-            updateStats();
+                updateStats();
+            } catch (e) { console.error("Render Error:", e); }
         };
 
         window.handleFile = async function(input) {
             const file = input.files[0]; if (!file) return;
-            document.getElementById('upload-area').classList.add('hidden'); document.getElementById('scan-loader').classList.remove('hidden');
+            document.getElementById('upload-area').classList.add('hidden');
+            document.getElementById('scan-loader').classList.remove('hidden');
             const reader = new FileReader(); reader.readAsDataURL(file);
             reader.onload = async () => {
                 try {
-                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${localStorage.getItem('lotus_gemini_key')}`, { method: 'POST', body: JSON.stringify({ contents: [{ parts: [{ text: "Extract JSON: customerName, phone, address, quoteNumber, amount" }, { inlineData: { mimeType: file.type, data: reader.result.split(',')[1] } }] }] }) });
-                    const d = await res.json(); const json = JSON.parse(d.candidates[0].content.parts[0].text.replace(/```json/g, '').replace(/```/g, '').trim());
+                    const key = localStorage.getItem('lotus_gemini_key');
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, { method: 'POST', body: JSON.stringify({ contents: [{ parts: [{ text: "Extract JSON: customerName, phone, address, quoteNumber, amount" }, { inlineData: { mimeType: file.type, data: reader.result.split(',')[1] } }] }] }) });
+                    const d = await res.json();
+                    const text = d.candidates[0].content.parts[0].text;
+                    const json = JSON.parse(text.replace(/```json/g, '').replace(/```/g, '').trim());
                     document.getElementById('scan-loader').classList.add('hidden'); document.getElementById('order-form').classList.remove('hidden');
                     document.getElementById('customerName').value = json.customerName || ''; document.getElementById('phone').value = json.phone || ''; document.getElementById('address').value = json.address || ''; document.getElementById('quoteNumber').value = json.quoteNumber || ''; document.getElementById('amount').value = String(json.amount).replace(/[^0-9]/g, '') || '';
-                } catch (e) { alert("Lỗi AI!"); document.getElementById('scan-loader').classList.add('hidden'); document.getElementById('upload-area').classList.remove('hidden'); }
+                } catch (e) { alert("AI Lỗi!"); document.getElementById('scan-loader').classList.add('hidden'); document.getElementById('upload-area').classList.remove('hidden'); }
             };
         };
 
         window.saveOrder = async function(e) {
-            e.preventDefault(); const c = { id: Date.now().toString(), customerName: document.getElementById('customerName').value, phone: document.getElementById('phone').value, address: document.getElementById('address').value, quoteNumber: document.getElementById('quoteNumber').value, amount: parseInt(document.getElementById('amount').value) || 0, status: 'quote', date: new Date().toISOString() };
-            cards.unshift(c); localStorage.setItem('lotus_crm_cards', JSON.stringify(cards)); renderBoard(); closeAll(); if (supabase) await supabase.from('orders').upsert({ id: c.id, customerName: c.customerName, phone: c.phone, address: c.address, quoteNumber: c.quoteNumber, amount: String(c.amount), status: c.status });
+            e.preventDefault();
+            const c = { id: Date.now().toString(), customerName: document.getElementById('customerName').value, phone: document.getElementById('phone').value, address: document.getElementById('address').value, quoteNumber: document.getElementById('quoteNumber').value, amount: parseInt(document.getElementById('amount').value) || 0, status: 'quote', date: new Date().toISOString() };
+            cards.unshift(c); saveLocal(); window.renderBoard(); window.closeAll();
+            if (supabase) await supabase.from('orders').upsert({ id: c.id, customerName: c.customerName, phone: c.phone, address: c.address, quoteNumber: c.quoteNumber, amount: String(c.amount), status: c.status });
         };
 
-        window.deleteCard = async function(id) { if (confirm('Xoá?')) { cards = cards.filter(c => c.id !== id); localStorage.setItem('lotus_crm_cards', JSON.stringify(cards)); renderBoard(); if (supabase) await supabase.from('orders').delete().eq('id', id); } };
+        window.deleteCard = async function(id) { if (confirm('Xoá?')) { cards = cards.filter(c => c.id !== id); saveLocal(); window.renderBoard(); if (supabase) await supabase.from('orders').delete().eq('id', id); } };
+
+        function saveLocal() { localStorage.setItem('lotus_crm_cards', JSON.stringify(cards)); }
         function updateStats() {
             const sumBy = s => cards.filter(c => c.status === s).reduce((a, b) => a + (Number(b.amount) || 0), 0);
             const fmt = v => new Intl.NumberFormat('vi-VN').format(v) + ' đ';
-            if (document.getElementById('stat-quote')) document.getElementById('stat-quote').textContent = fmt(sumBy('quote'));
-            if (document.getElementById('stat-completed')) document.getElementById('stat-completed').textContent = fmt(cards.filter(c => ['completed','paid','deliver'].includes(c.status)).reduce((a,b)=>a+(Number(b.amount)||0),0));
-            if (document.getElementById('stat-debt')) document.getElementById('stat-debt').textContent = fmt(sumBy('debt'));
+            const sQuote = document.getElementById('stat-quote');
+            const sComp = document.getElementById('stat-completed');
+            const sDebt = document.getElementById('stat-debt');
+            if (sQuote) sQuote.textContent = fmt(sumBy('quote'));
+            if (sComp) sComp.textContent = fmt(cards.filter(c => ['completed','paid','deliver'].includes(c.status)).reduce((a,b)=>a+(Number(b.amount)||0),0));
+            if (sDebt) sDebt.textContent = fmt(sumBy('debt'));
         }
 
-        renderBoard();
+        // AUTO-INIT
+        window.renderBoard();
+
+        // SUPABASE SYNC (SILENT)
         setTimeout(async () => {
-            if (window.supabase) {
-                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-                const { data } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
-                if (data?.length > 0) { cards = data.map(d => ({ id: d.id, customerName: d.customerName, phone: d.phone, address: d.address, quoteNumber: d.quoteNumber, amount: parseInt(d.amount) || 0, status: d.status, date: d.created_at })); renderBoard(); localStorage.setItem('lotus_crm_cards', JSON.stringify(cards)); }
-            }
+            try {
+                if (window.supabase) {
+                    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                    const { data } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+                    if (data?.length > 0) {
+                        cards = data.map(d => ({ id: d.id, customerName: d.customerName, phone: d.phone, address: d.address, quoteNumber: d.quoteNumber, amount: parseInt(d.amount) || 0, status: d.status, date: d.created_at }));
+                        window.renderBoard(); saveLocal();
+                    }
+                }
+            } catch (e) { console.error("Sync Error:", e); }
         }, 500);
     </script>
 </body>
