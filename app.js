@@ -1,4 +1,4 @@
-// Supabase Configuration
+// --- CONFIGURATION ---
 const SUPABASE_URL = 'https://zbnnctvggpupdnjmydcu.supabase.co';
 const SUPABASE_KEY = 'sb_publishable__Uc7k0lfdHFzBjWT-3o36w_ydCDXOT8';
 
@@ -6,15 +6,10 @@ let supabase = null;
 try {
     if (window.supabase) {
         supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        console.log("Supabase initialized successfully.");
-    } else {
-        console.warn("Supabase library not found. Running in Local Mode.");
     }
-} catch (e) {
-    console.error("Supabase init error:", e);
-}
+} catch (e) { console.error("Supabase Init Error:", e); }
 
-// State Management
+// --- STATE ---
 const COLUMNS = [
     { id: 'quote', title: 'Báo Giá', color: 'var(--tag-quote)' },
     { id: 'confirm', title: 'Chốt Đơn', color: 'var(--tag-confirm)' },
@@ -24,118 +19,22 @@ const COLUMNS = [
     { id: 'completed', title: 'Hoàn Tất Đơn Hàng', color: '#0F766E' }
 ];
 
-let cards = [];
+let cards = JSON.parse(localStorage.getItem('lotus_crm_cards')) || [];
 
-// DOM Elements
-const getEl = id => document.getElementById(id);
-const boardEl = getEl('board');
-const btnUpload = getEl('btn-upload');
-const btnDashboard = getEl('btn-dashboard');
-const btnSettings = getEl('btn-settings');
-const uploadModal = getEl('upload-modal');
-const dashboardModal = getEl('dashboard-modal');
-const settingsModal = getEl('settings-modal');
-const searchInput = getEl('search-input');
-const monthFilter = getEl('month-filter');
-const apiKeyInput = getEl('apiKeyInput');
-const btnSaveKey = getEl('btn-save-key');
-const uploadArea = getEl('upload-area');
-const fileInput = getEl('file-input');
-const scanLoader = getEl('scan-loader');
-const orderForm = getEl('order-form');
-
-// Initialize App
-async function initApp() {
-    console.log("App starting...");
-    renderBoard(); // Render immediately
-    
-    if (supabase) {
-        await loadCardsFromCloud();
-        renderBoard();
-    } else {
-        cards = JSON.parse(localStorage.getItem('lotus_crm_cards')) || [];
-        renderBoard();
-    }
-}
-
-async function loadCardsFromCloud() {
-    try {
-        const { data, error } = await supabase
-            .from('orders')
-            .select('*')
-            .order('created_at', { ascending: false });
-        
-        if (error) throw error;
-        
-        if (data && data.length > 0) {
-            cards = data.map(item => ({
-                id: item.id,
-                customerName: item.customerName || 'Khách hàng',
-                phone: item.phone || '',
-                address: item.address || '',
-                quoteNumber: item.quoteNumber || '',
-                amount: parseInt(String(item.amount).replace(/[^0-9]/g, '')) || 0,
-                status: item.status || 'quote',
-                date: item.created_at
-            }));
-        } else {
-            const localData = JSON.parse(localStorage.getItem('lotus_crm_cards')) || [];
-            if (localData.length > 0) {
-                cards = localData;
-                for (const card of localData) {
-                    await supabase.from('orders').insert({
-                        id: card.id,
-                        customerName: card.customerName,
-                        phone: card.phone,
-                        address: card.address,
-                        quoteNumber: card.quoteNumber,
-                        amount: String(card.amount),
-                        status: card.status
-                    });
-                }
-            }
-        }
-    } catch (e) {
-        console.error("Cloud Error:", e);
-        cards = JSON.parse(localStorage.getItem('lotus_crm_cards')) || [];
-    }
-}
-
-async function syncCardToCloud(card) {
-    localStorage.setItem('lotus_crm_cards', JSON.stringify(cards));
-    if (!supabase) return;
-    try {
-        await supabase.from('orders').upsert({
-            id: card.id,
-            customerName: card.customerName,
-            phone: card.phone,
-            address: card.address,
-            quoteNumber: card.quoteNumber,
-            amount: String(card.amount),
-            status: card.status
-        });
-    } catch (e) { console.error(e); }
-}
-
-async function deleteCardFromCloud(id) {
-    localStorage.setItem('lotus_crm_cards', JSON.stringify(cards));
-    if (!supabase) return;
-    try {
-        await supabase.from('orders').delete().eq('id', id);
-    } catch (e) { console.error(e); }
-}
-
+// --- CORE FUNCTIONS ---
 function renderBoard() {
+    const boardEl = document.getElementById('board');
     if (!boardEl) return;
     boardEl.innerHTML = '';
     
-    const searchTerm = (searchInput ? searchInput.value : '').toLowerCase();
-    const filterMonth = monthFilter ? monthFilter.value : 'all';
+    const searchTerm = (document.getElementById('search-input')?.value || '').toLowerCase();
+    const filterMonth = document.getElementById('month-filter')?.value || 'all';
     const now = new Date();
     
     COLUMNS.forEach(col => {
         let colCards = cards.filter(c => c.status === col.id);
         
+        // Month Filter
         if (filterMonth !== 'all') {
             colCards = colCards.filter(c => {
                 const d = new Date(c.date);
@@ -148,6 +47,7 @@ function renderBoard() {
             });
         }
         
+        // Search Filter
         if (searchTerm) {
             colCards = colCards.filter(c => 
                 (c.customerName || '').toLowerCase().includes(searchTerm) ||
@@ -155,13 +55,12 @@ function renderBoard() {
             );
         }
         
-        const colTotal = colCards.reduce((sum, c) => sum + (c.amount || 0), 0);
+        const colTotal = colCards.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
         const formatCurrency = val => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
         
         const colEl = document.createElement('div');
         colEl.className = 'column';
         colEl.dataset.status = col.id;
-        
         colEl.innerHTML = `
             <div class="column-header" style="border-top-color: ${col.color}">
                 <div class="column-header-top">
@@ -170,10 +69,13 @@ function renderBoard() {
                 </div>
                 <div class="col-total">${formatCurrency(colTotal)}</div>
             </div>
-            <div class="column-body" id="col-${col.id}">
-                ${colCards.map(createCardHTML).join('')}
-            </div>
+            <div class="column-body" id="col-${col.id}"></div>
         `;
+        
+        const body = colEl.querySelector('.column-body');
+        colCards.forEach(card => {
+            body.innerHTML += createCardHTML(card);
+        });
         
         boardEl.appendChild(colEl);
     });
@@ -185,7 +87,6 @@ function renderBoard() {
 function createCardHTML(card) {
     const formattedDate = new Date(card.date).toLocaleDateString('vi-VN');
     const formatCurrency = val => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
-    
     return `
         <div class="card" draggable="true" data-id="${card.id}">
             <div class="card-header">
@@ -205,19 +106,13 @@ function createCardHTML(card) {
 }
 
 function setupDragAndDrop() {
-    const cardEls = document.querySelectorAll('.card');
-    const columnBodies = document.querySelectorAll('.column-body');
-    
-    cardEls.forEach(card => {
+    document.querySelectorAll('.card').forEach(card => {
         card.ondragstart = () => card.classList.add('dragging');
         card.ondragend = () => card.classList.remove('dragging');
     });
     
-    columnBodies.forEach(body => {
-        body.ondragover = e => {
-            e.preventDefault();
-            body.classList.add('drag-over');
-        };
+    document.querySelectorAll('.column-body').forEach(body => {
+        body.ondragover = e => { e.preventDefault(); body.classList.add('drag-over'); };
         body.ondragleave = () => body.classList.remove('drag-over');
         body.ondrop = async e => {
             e.preventDefault();
@@ -230,7 +125,16 @@ function setupDragAndDrop() {
             if (idx > -1) {
                 cards[idx].status = newStatus;
                 renderBoard();
-                await syncCardToCloud(cards[idx]);
+                if (supabase) await supabase.from('orders').upsert({
+                    id: cards[idx].id,
+                    customerName: cards[idx].customerName,
+                    phone: cards[idx].phone,
+                    address: cards[idx].address,
+                    quoteNumber: cards[idx].quoteNumber,
+                    amount: String(cards[idx].amount),
+                    status: cards[idx].status
+                });
+                localStorage.setItem('lotus_crm_cards', JSON.stringify(cards));
             }
         };
     });
@@ -238,142 +142,158 @@ function setupDragAndDrop() {
 
 function updateDashboardStats() {
     const formatCurrency = val => new Intl.NumberFormat('vi-VN').format(val) + ' đ';
-    const totalQuote = cards.filter(c => c.status === 'quote').reduce((sum, c) => sum + (c.amount || 0), 0);
-    const totalCompleted = cards.filter(c => c.status === 'completed' || c.status === 'paid').reduce((sum, c) => sum + (c.amount || 0), 0);
-    const totalDebt = cards.filter(c => c.status === 'debt').reduce((sum, c) => sum + (c.amount || 0), 0);
+    const totalQuote = cards.filter(c => c.status === 'quote').reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+    const totalCompleted = cards.filter(c => ['completed', 'paid', 'deliver'].includes(c.status)).reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+    const totalDebt = cards.filter(c => c.status === 'debt').reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
     
-    const quoteEl = getEl('stat-quote');
-    const completedEl = getEl('stat-completed');
-    const debtEl = getEl('stat-debt');
-    if (quoteEl) quoteEl.textContent = formatCurrency(totalQuote);
-    if (completedEl) completedEl.textContent = formatCurrency(totalCompleted);
-    if (debtEl) debtEl.textContent = formatCurrency(totalDebt);
+    if (document.getElementById('stat-quote')) document.getElementById('stat-quote').textContent = formatCurrency(totalQuote);
+    if (document.getElementById('stat-completed')) document.getElementById('stat-completed').textContent = formatCurrency(totalCompleted);
+    if (document.getElementById('stat-debt')) document.getElementById('stat-debt').textContent = formatCurrency(totalDebt);
+}
+
+async function loadCloud() {
+    if (!supabase) return;
+    try {
+        const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+        if (data && data.length > 0) {
+            cards = data.map(item => ({
+                id: item.id,
+                customerName: item.customerName,
+                phone: item.phone,
+                address: item.address,
+                quoteNumber: item.quoteNumber,
+                amount: parseInt(item.amount) || 0,
+                status: item.status,
+                date: item.created_at
+            }));
+            renderBoard();
+        }
+    } catch (e) { console.error("Load Cloud Error:", e); }
 }
 
 async function deleteCard(id) {
-    if (confirm('Bạn có chắc chắn muốn xoá đơn hàng này?')) {
-        cards = cards.filter(c => c.id !== id);
-        renderBoard();
-        await deleteCardFromCloud(id);
-    }
-}
-
-// Handlers
-if (btnUpload) btnUpload.onclick = () => {
-    uploadModal.classList.add('active');
-    orderForm.classList.add('hidden');
-    scanLoader.classList.add('hidden');
-    uploadArea.classList.remove('hidden');
-};
-if (btnDashboard) btnDashboard.onclick = () => {
-    updateDashboardStats();
-    dashboardModal.classList.add('active');
-};
-if (btnSettings) btnSettings.onclick = () => {
-    apiKeyInput.value = localStorage.getItem('lotus_gemini_key') || '';
-    settingsModal.classList.add('active');
-};
-document.querySelectorAll('.close-btn, .close-modal').forEach(btn => {
-    btn.onclick = () => {
-        uploadModal.classList.remove('active');
-        dashboardModal.classList.remove('active');
-        settingsModal.classList.remove('active');
-    };
-});
-if (btnSaveKey) btnSaveKey.onclick = () => {
-    localStorage.setItem('lotus_gemini_key', apiKeyInput.value.trim());
-    settingsModal.classList.remove('active');
-    alert('Đã lưu cấu hình AI!');
-};
-if (uploadArea) uploadArea.onclick = () => fileInput.click();
-if (fileInput) fileInput.onchange = async e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    uploadArea.classList.add('hidden');
-    scanLoader.classList.remove('hidden');
-    try {
-        const base64 = await toBase64(file);
-        const data = await scanImageWithGemini(base64.split(',')[1], file.type);
-        scanLoader.classList.add('hidden');
-        orderForm.classList.remove('hidden');
-        getEl('customerName').value = data.customerName || '';
-        getEl('phone').value = data.phone || '';
-        getEl('address').value = data.address || '';
-        getEl('quoteNumber').value = data.quoteNumber || '';
-        getEl('amount').value = String(data.amount).replace(/[^0-9]/g, '') || '';
-    } catch (err) {
-        alert("Lỗi AI: " + err.message);
-        scanLoader.classList.add('hidden');
-        uploadArea.classList.remove('hidden');
-    }
-};
-
-const toBase64 = file => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = error => reject(error);
-});
-
-async function scanImageWithGemini(base64Image, mimeType) {
-    const key = (localStorage.getItem('lotus_gemini_key') || '').trim();
-    if (!key) throw new Error("Chưa có API Key");
-    let availableModels = [];
-    try {
-        const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
-        if (listRes.ok) {
-            const listData = await listRes.json();
-            availableModels = listData.models.filter(m => m.supportedGenerationMethods.includes('generateContent'));
-        }
-    } catch(e) {}
-    const priorityModels = [
-        availableModels.find(m => m.name.includes('gemini-1.5-flash')),
-        availableModels.find(m => m.name.includes('gemini-1.5-pro')),
-        availableModels[0]
-    ].filter(m => m);
-    for (const model of priorityModels) {
-        try {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model.name.split('/').pop()}:generateContent?key=${key}`;
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [
-                        { text: "Trích xuất JSON: customerName, phone, address, quoteNumber, amount (số)" },
-                        { inlineData: { mimeType, data: base64Image } }
-                    ] }]
-                })
-            });
-            const data = await response.json();
-            if (response.ok && data.candidates) {
-                let text = data.candidates[0].content.parts[0].text;
-                return JSON.parse(text.replace(/```json/g, '').replace(/```/g, '').trim());
-            }
-        } catch (e) {}
-    }
-    throw new Error("AI đang bận.");
-}
-
-if (orderForm) orderForm.onsubmit = async e => {
-    e.preventDefault();
-    const newCard = {
-        id: Date.now().toString(),
-        customerName: getEl('customerName').value,
-        phone: getEl('phone').value,
-        address: getEl('address').value,
-        quoteNumber: getEl('quoteNumber').value,
-        amount: parseInt(getEl('amount').value) || 0,
-        status: 'quote',
-        date: new Date().toISOString()
-    };
-    cards.unshift(newCard);
+    if (!confirm('Xoá đơn hàng này?')) return;
+    cards = cards.filter(c => c.id !== id);
     renderBoard();
-    uploadModal.classList.remove('active');
-    await syncCardToCloud(newCard);
-};
+    localStorage.setItem('lotus_crm_cards', JSON.stringify(cards));
+    if (supabase) await supabase.from('orders').delete().eq('id', id);
+}
 
-if (searchInput) searchInput.oninput = renderBoard;
-if (monthFilter) monthFilter.onchange = renderBoard;
+// --- INITIALIZATION ---
+function init() {
+    console.log("Lotus CRM Booting...");
+    renderBoard();
+    loadCloud();
+    
+    // Bind UI Events
+    const btnUpload = document.getElementById('btn-upload');
+    const uploadModal = document.getElementById('upload-modal');
+    if (btnUpload) btnUpload.onclick = () => {
+        uploadModal.classList.add('active');
+        document.getElementById('order-form').classList.add('hidden');
+        document.getElementById('scan-loader').classList.add('hidden');
+        document.getElementById('upload-area').classList.remove('hidden');
+    };
 
-// Start
-initApp();
+    const btnDashboard = document.getElementById('btn-dashboard');
+    const dashboardModal = document.getElementById('dashboard-modal');
+    if (btnDashboard) btnDashboard.onclick = () => {
+        updateDashboardStats();
+        dashboardModal.classList.add('active');
+    };
+
+    const btnSettings = document.getElementById('btn-settings');
+    const settingsModal = document.getElementById('settings-modal');
+    if (btnSettings) btnSettings.onclick = () => {
+        document.getElementById('apiKeyInput').value = localStorage.getItem('lotus_gemini_key') || '';
+        settingsModal.classList.add('active');
+    };
+
+    document.querySelectorAll('.close-btn, .close-modal').forEach(btn => {
+        btn.onclick = () => {
+            uploadModal.classList.remove('active');
+            dashboardModal.classList.remove('active');
+            settingsModal.classList.remove('active');
+        };
+    });
+
+    const btnSaveKey = document.getElementById('btn-save-key');
+    if (btnSaveKey) btnSaveKey.onclick = () => {
+        localStorage.setItem('lotus_gemini_key', document.getElementById('apiKeyInput').value.trim());
+        settingsModal.classList.remove('active');
+        alert('Đã lưu!');
+    };
+
+    const uploadArea = document.getElementById('upload-area');
+    const fileInput = document.getElementById('file-input');
+    if (uploadArea) uploadArea.onclick = () => fileInput.click();
+    if (fileInput) fileInput.onchange = async e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        uploadArea.classList.add('hidden');
+        document.getElementById('scan-loader').classList.remove('hidden');
+        try {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = async () => {
+                const data = await scanImageWithGemini(reader.result.split(',')[1], file.type);
+                document.getElementById('scan-loader').classList.add('hidden');
+                document.getElementById('order-form').classList.remove('hidden');
+                document.getElementById('customerName').value = data.customerName || '';
+                document.getElementById('phone').value = data.phone || '';
+                document.getElementById('address').value = data.address || '';
+                document.getElementById('quoteNumber').value = data.quoteNumber || '';
+                document.getElementById('amount').value = String(data.amount).replace(/[^0-9]/g, '') || '';
+            };
+        } catch (err) { alert("Lỗi: " + err.message); }
+    };
+
+    const orderForm = document.getElementById('order-form');
+    if (orderForm) orderForm.onsubmit = async e => {
+        e.preventDefault();
+        const newCard = {
+            id: Date.now().toString(),
+            customerName: document.getElementById('customerName').value,
+            phone: document.getElementById('phone').value,
+            address: document.getElementById('address').value,
+            quoteNumber: document.getElementById('quoteNumber').value,
+            amount: parseInt(document.getElementById('amount').value) || 0,
+            status: 'quote',
+            date: new Date().toISOString()
+        };
+        cards.unshift(newCard);
+        renderBoard();
+        uploadModal.classList.remove('active');
+        localStorage.setItem('lotus_crm_cards', JSON.stringify(cards));
+        if (supabase) await supabase.from('orders').upsert({
+            id: newCard.id,
+            customerName: newCard.customerName,
+            phone: newCard.phone,
+            address: newCard.address,
+            quoteNumber: newCard.quoteNumber,
+            amount: String(newCard.amount),
+            status: newCard.status
+        });
+    };
+
+    if (document.getElementById('search-input')) document.getElementById('search-input').oninput = renderBoard;
+    if (document.getElementById('month-filter')) document.getElementById('month-filter').onchange = renderBoard;
+}
+
+async function scanImageWithGemini(base64, mimeType) {
+    const key = (localStorage.getItem('lotus_gemini_key') || '').trim();
+    if (!key) throw new Error("Cần API Key");
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: "Trích xuất JSON: customerName, phone, address, quoteNumber, amount" }, { inlineData: { mimeType, data: base64 } }] }] })
+    });
+    const data = await res.json();
+    if (data.candidates) {
+        let text = data.candidates[0].content.parts[0].text;
+        return JSON.parse(text.replace(/```json/g, '').replace(/```/g, '').trim());
+    }
+    throw new Error("AI bận");
+}
+
+window.onload = init;
