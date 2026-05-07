@@ -343,7 +343,7 @@ async function scanImageWithGemini(base64Image, mimeType) {
     const key = (localStorage.getItem('lotus_gemini_key') || '').trim();
     if (!key) throw new Error("Chưa có API Key");
 
-    // 1. CHIẾN THUẬT MASTER: Tự động dò tìm danh sách model mà API Key này được phép dùng
+    // 1. Dò tìm danh sách model
     let availableModels = [];
     try {
         const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
@@ -353,44 +353,56 @@ async function scanImageWithGemini(base64Image, mimeType) {
         }
     } catch(e) { console.warn("Probe failed", e); }
 
-    // 2. Chọn model tốt nhất có sẵn (Ưu tiên Flash 1.5 -> Pro 1.5 -> Vision 1.0)
-    const bestModel = availableModels.find(m => m.name.includes('gemini-1.5-flash')) || 
-                      availableModels.find(m => m.name.includes('gemini-1.5-pro')) || 
-                      availableModels.find(m => m.name.includes('gemini-pro-vision')) ||
-                      availableModels.find(m => m.name.includes('flash')) ||
-                      (availableModels.length > 0 ? availableModels[0] : null);
+    // 2. Danh sách ưu tiên để thử (Lách tắc đường)
+    const priorityModels = [
+        availableModels.find(m => m.name.includes('gemini-1.5-flash')),
+        availableModels.find(m => m.name.includes('gemini-1.5-pro')),
+        availableModels.find(m => m.name.includes('gemini-pro-vision')),
+        availableModels[0]
+    ].filter(m => m); // Loại bỏ các model không tồn tại
 
-    const modelName = bestModel ? bestModel.name.split('/').pop() : 'gemini-1.5-flash';
-    const version = bestModel ? 'v1beta' : 'v1'; // Ưu tiên v1beta nếu probe thành công
+    let lastError = "Không thể kết nối AI";
 
-    try {
-        const url = `https://generativelanguage.googleapis.com/${version}/models/${modelName}:generateContent?key=${key}`;
-        
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [
-                    { text: "Đọc ảnh báo giá và trả về JSON: customerName, phone, address, quoteNumber, amount (số)" },
-                    { inlineData: { mimeType: mimeType, data: base64Image } }
-                ] }]
-            })
-        });
+    for (const model of priorityModels) {
+        const modelName = model.name.split('/').pop();
+        try {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${key}`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [
+                        { text: "Bạn là chuyên gia bóc tách dữ liệu. Trả về JSON: customerName, phone, address, quoteNumber, amount (số tiền)" },
+                        { inlineData: { mimeType: mimeType, data: base64Image } }
+                    ] }]
+                })
+            });
 
-        if (response.ok) {
-            const json = await response.json();
-            if (json.candidates && json.candidates[0]) {
-                let text = json.candidates[0].content.parts[0].text;
-                text = text.replace(/```json/g, '').replace(/```/g, '').trim();
-                return JSON.parse(text);
+            const data = await response.json();
+            
+            if (response.ok) {
+                if (data.candidates && data.candidates[0]) {
+                    let text = data.candidates[0].content.parts[0].text;
+                    text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                    return JSON.parse(text);
+                }
+            } else {
+                lastError = data.error?.message || "Lỗi AI";
+                // Nếu lỗi là "High Demand" hoặc "Overloaded", tiếp tục thử model tiếp theo trong danh sách
+                if (lastError.includes("high demand") || lastError.includes("overloaded") || response.status === 503) {
+                    console.warn(`Model ${modelName} đang bận, thử model tiếp theo...`);
+                    continue;
+                }
+                throw new Error(lastError);
             }
-        } else {
-            const errData = await response.json().catch(() => ({}));
-            throw new Error(errData.error?.message || "Lỗi không xác định từ Google");
+        } catch (e) {
+            lastError = e.message;
+            if (lastError.includes("high demand") || lastError.includes("overloaded")) continue;
+            throw e;
         }
-    } catch (e) {
-        throw new Error(e.message || "Không thể kết nối AI");
     }
+    
+    throw new Error(lastError);
 }
 
 orderForm.addEventListener('submit', e => {
