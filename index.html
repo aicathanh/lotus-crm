@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lotus CRM - v8.3 God Mode</title>
+    <title>Lotus CRM - v8.4 Truth</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
@@ -11,7 +11,7 @@
         .modal-overlay { display: none !important; }
         .modal-overlay.active { display: flex !important; opacity: 1 !important; pointer-events: auto !important; }
         .app-header { z-index: 10000 !important; position: relative !important; }
-        #debug-tag { background: #000000 !important; color: #FFFFFF !important; }
+        #debug-tag { background: #FFFFFF !important; color: #000000 !important; border: 1px solid #000; }
         .error-detail { margin-top: 10px; font-family: monospace; font-size: 11px; padding: 10px; background: #FFF1F2; border: 1px solid #FDA4AF; color: #9F1239; border-radius: 4px; white-space: pre-wrap; word-break: break-all; }
         .magic-paste-area { width: 100%; height: 100px; padding: 12px; border: 2px solid var(--primary); border-radius: 8px; font-size: 13px; margin-top: 10px; background: #F0FDFA; }
         .diagnostic-step { font-size: 11px; color: #666; margin-top: 5px; font-style: italic; }
@@ -19,7 +19,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-    <div id="debug-tag" style="position:fixed; top:0; left:0; font-size:10px; padding:2px 8px; z-index:10001; border-radius: 0 0 4px 0; font-weight:bold;">v8.3 - God Mode</div>
+    <div id="debug-tag" style="position:fixed; top:0; left:0; font-size:10px; padding:2px 8px; z-index:10001; border-radius: 0 0 4px 0; font-weight:bold;">v8.4 - Truth</div>
 
     <div class="app-container">
         <header class="app-header">
@@ -35,7 +35,7 @@
     </div>
 
     <div class="modal-overlay" id="settings-modal"><div class="modal"><div class="modal-header"><h3>Cài đặt AI</h3><button class="close-btn" onclick="closeAll()"><i class="fa-solid fa-xmark"></i></button></div><div class="modal-body">
-        <div class="form-group"><label>Google Gemini API Key (Mã 8 triệu)</label><input type="password" id="apiKeyInput" placeholder="Dán mã vào đây..."></div>
+        <div class="form-group"><label>Google Gemini API Key (Mã VIP 8 triệu)</label><input type="password" id="apiKeyInput" placeholder="Dán mã vào đây..."></div>
         <div class="form-actions" style="margin-top:15px;"><button class="btn btn-primary" onclick="saveKey()">Lưu Cấu Hình</button></div>
     </div></div></div>
     
@@ -47,16 +47,14 @@
                 <p>Nhấn hoặc Kéo thả ảnh báo giá</p>
             </div>
             <div style="text-align: center; margin-top:10px;">
-                <p style="font-size:12px; color:#666;">Hoặc dán văn bản từ ảnh (Cách này ổn định nhất)</p>
-                <textarea class="magic-paste-area" id="magic-paste" placeholder="Dán nội dung chữ copy từ ảnh báo giá vào đây..." oninput="handleMagicPaste(this.value)"></textarea>
+                <textarea class="magic-paste-area" id="magic-paste" placeholder="Hoặc dán văn bản copy từ ảnh vào đây (Chắc chắn 100% được)..." oninput="handleMagicPaste(this.value)"></textarea>
             </div>
         </div>
-        <div id="scan-loader" class="scan-loader hidden"><div class="spinner"></div><p id="scan-status">Đang kích hoạt chế độ God Mode...</p><div id="diagnostic-log" class="diagnostic-step"></div></div>
+        <div id="scan-loader" class="scan-loader hidden"><div class="spinner"></div><p id="scan-status">Đang truy tìm mô hình AI phù hợp...</p><div id="diagnostic-log" class="diagnostic-step"></div></div>
         <div id="error-box" class="hidden">
             <div class="error-detail" id="error-msg"></div>
             <div style="text-align: center; margin-top: 15px;">
-                <p style="font-size:12px; margin-bottom:10px;">Hãy dán đoạn mã đỏ ở trên cho tôi!</p>
-                <button class="btn btn-primary" onclick="openUpload()">Dùng "Dán Văn Bản" (Chắc chắn được)</button>
+                <button class="btn btn-primary" onclick="openUpload()">Dùng "Dán Văn Bản" (Cách dự phòng tốt nhất)</button>
             </div>
         </div>
         <form id="order-form" class="hidden" onsubmit="saveOrder(event)">
@@ -74,7 +72,6 @@
         function closeAll() { var ms = document.querySelectorAll('.modal-overlay'); for(var i=0; i<ms.length; i++) ms[i].classList.remove('active'); }
         function openSettings() { document.getElementById('apiKeyInput').value = localStorage.getItem('lotus_gemini_key') || ''; document.getElementById('settings-modal').classList.add('active'); }
         function openUpload() { document.getElementById('upload-modal').classList.add('active'); document.getElementById('upload-main-area').classList.remove('hidden'); document.getElementById('order-form').classList.add('hidden'); document.getElementById('scan-loader').classList.add('hidden'); document.getElementById('error-box').classList.add('hidden'); document.getElementById('magic-paste').value = ''; }
-        function openManualForm() { document.getElementById('upload-main-area').classList.add('hidden'); document.getElementById('scan-loader').classList.add('hidden'); document.getElementById('error-box').classList.add('hidden'); document.getElementById('order-form').classList.remove('hidden'); document.getElementById('order-form').reset(); }
         function saveKey() { localStorage.setItem('lotus_gemini_key', document.getElementById('apiKeyInput').value.trim()); alert('Đã lưu mã!'); closeAll(); }
         function saveLocal() { localStorage.setItem('lotus_crm_cards', JSON.stringify(cards)); }
 
@@ -103,7 +100,6 @@
             if (val.length < 10) return;
             document.getElementById('upload-main-area').classList.add('hidden');
             document.getElementById('scan-loader').classList.remove('hidden');
-            document.getElementById('diagnostic-log').textContent = "Đang xử lý văn bản...";
             callAI(val, false);
         }
 
@@ -126,44 +122,54 @@
 
         function callAI(data, isImage) {
             var key = (localStorage.getItem('lotus_gemini_key') || '').trim();
-            var part = isImage ? { inlineData: { mimeType: "image/jpeg", data: data } } : { text: data };
-            var body = { contents: [{ parts: [{ text: "Extract JSON: customerName, phone, address, quoteNumber, amount" }, part] }], safetySettings: [{ category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" }, { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" }, { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" }, { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }] };
+            document.getElementById('diagnostic-log').textContent = "Đang hỏi Google về các mô hình có sẵn...";
             
-            var configs = [
-                { url: 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent', label: 'Stable v1 Flash' },
-                { url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent', label: 'Beta v1 Flash' },
-                { url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent', label: 'Legacy Vision' },
-                { url: 'https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent', label: 'Stable Pro' }
-            ];
-            
-            var idx = 0;
-            function tryPort() {
-                if (idx >= configs.length) {
-                    document.getElementById('scan-loader').classList.add('hidden');
-                    document.getElementById('error-box').classList.remove('hidden');
-                    return;
+            // DISCOVER MODELS
+            fetch('https://generativelanguage.googleapis.com/v1beta/models?key=' + key)
+            .then(function(res) { return res.json(); })
+            .then(function(d) {
+                var models = d.models || [];
+                var targetModel = null;
+                if (isImage) {
+                    // Find Flash or Vision
+                    for(var i=0; i<models.length; i++) {
+                        if (models[i].name.indexOf('flash') > -1 || models[i].name.indexOf('vision') > -1) {
+                            targetModel = models[i].name; break;
+                        }
+                    }
+                } else {
+                    // Find Pro or Text
+                    for(var i=0; i<models.length; i++) {
+                        if (models[i].name.indexOf('pro') > -1) {
+                            targetModel = models[i].name; break;
+                        }
+                    }
                 }
-                var c = configs[idx];
-                document.getElementById('diagnostic-log').textContent = "Thử cổng: " + c.label + "...";
                 
-                fetch(c.url + '?key=' + key, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-                .then(function(res) { return res.json().then(function(d) { if (!res.ok) throw new Error(JSON.stringify(d.error || d)); return d; }); })
-                .then(function(d) {
-                    var text = d.candidates[0].content.parts[0].text;
-                    var json = JSON.parse(text.replace(/```json/g, '').replace(/```/g, '').trim());
-                    document.getElementById('scan-loader').classList.add('hidden');
-                    document.getElementById('order-form').classList.remove('hidden');
-                    document.getElementById('customerName').value = json.customerName || '';
-                    document.getElementById('phone').value = json.phone || '';
-                    document.getElementById('address').value = json.address || '';
-                    document.getElementById('quoteNumber').value = json.quoteNumber || '';
-                    document.getElementById('amount').value = String(json.amount || '').replace(/[^0-9]/g, '') || '';
-                }).catch(function(err) {
-                    document.getElementById('error-msg').textContent = "LỖI TẠI CỔNG " + c.label + ":\n" + err.message;
-                    idx++; tryPort();
-                });
-            }
-            tryPort();
+                if (!targetModel) targetModel = isImage ? 'models/gemini-1.5-flash' : 'models/gemini-pro';
+                document.getElementById('diagnostic-log').textContent = "Đang dùng mô hình: " + targetModel;
+                
+                var part = isImage ? { inlineData: { mimeType: "image/jpeg", data: data } } : { text: data };
+                var body = { contents: [{ parts: [{ text: "Extract JSON: customerName, phone, address, quoteNumber, amount" }, part] }], safetySettings: [{ category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" }, { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" }, { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" }, { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }] };
+                
+                return fetch('https://generativelanguage.googleapis.com/v1beta/' + targetModel + ':generateContent?key=' + key, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            })
+            .then(function(res) { return res.json().then(function(d) { if (!res.ok) throw new Error(JSON.stringify(d.error || d)); return d; }); })
+            .then(function(d) {
+                var text = d.candidates[0].content.parts[0].text;
+                var json = JSON.parse(text.replace(/```json/g, '').replace(/```/g, '').trim());
+                document.getElementById('scan-loader').classList.add('hidden');
+                document.getElementById('order-form').classList.remove('hidden');
+                document.getElementById('customerName').value = json.customerName || '';
+                document.getElementById('phone').value = json.phone || '';
+                document.getElementById('address').value = json.address || '';
+                document.getElementById('quoteNumber').value = json.quoteNumber || '';
+                document.getElementById('amount').value = String(json.amount || '').replace(/[^0-9]/g, '') || '';
+            }).catch(function(err) {
+                document.getElementById('scan-loader').classList.add('hidden');
+                document.getElementById('error-box').classList.remove('hidden');
+                document.getElementById('error-msg').textContent = "LỖI HỆ THỐNG:\n" + err.message;
+            });
         }
 
         function saveOrder(e) {
