@@ -36,8 +36,9 @@ const orderForm = document.getElementById('order-form');
 
 // Initialize App
 async function initApp() {
+    renderBoard(); // Dựng cột trước
     await loadCardsFromCloud();
-    renderBoard();
+    renderBoard(); // Render lại khi có data
 }
 
 async function loadCardsFromCloud() {
@@ -49,12 +50,24 @@ async function loadCardsFromCloud() {
         
         if (error) throw error;
         
-        // Migration logic: If cloud is empty, check local
-        if (data.length === 0) {
+        if (data && data.length > 0) {
+            cards = data.map(item => ({
+                id: item.id,
+                customerName: item.customerName || 'Khách hàng ẩn danh',
+                phone: item.phone || '',
+                address: item.address || '',
+                quoteNumber: item.quoteNumber || '',
+                amount: parseInt(String(item.amount).replace(/[^0-9]/g, '')) || 0,
+                status: item.status,
+                date: item.created_at
+            }));
+        } else {
+            // Check migration
             const localData = JSON.parse(localStorage.getItem('lotus_crm_cards')) || [];
             if (localData.length > 0) {
+                cards = localData;
                 for (const card of localData) {
-                    const dbCard = {
+                    await supabase.from('orders').insert({
                         id: card.id,
                         customerName: card.customerName,
                         phone: card.phone,
@@ -62,28 +75,19 @@ async function loadCardsFromCloud() {
                         quoteNumber: card.quoteNumber,
                         amount: String(card.amount),
                         status: card.status
-                    };
-                    await supabase.from('orders').insert(dbCard);
+                    });
                 }
-                cards = localData;
             }
-        } else {
-            // Map DB data back to local structure (amount string to number)
-            cards = data.map(item => ({
-                ...item,
-                amount: parseInt(item.amount.replace(/[^0-9]/g, '')) || 0,
-                date: item.created_at
-            }));
         }
     } catch (e) {
-        console.error("Cloud load error:", e);
+        console.error("Cloud Error:", e);
         cards = JSON.parse(localStorage.getItem('lotus_crm_cards')) || [];
     }
 }
 
 async function syncCardToCloud(card) {
     try {
-        const dbCard = {
+        await supabase.from('orders').upsert({
             id: card.id,
             customerName: card.customerName,
             phone: card.phone,
@@ -91,41 +95,37 @@ async function syncCardToCloud(card) {
             quoteNumber: card.quoteNumber,
             amount: String(card.amount),
             status: card.status
-        };
-        await supabase.from('orders').upsert(dbCard);
+        });
         localStorage.setItem('lotus_crm_cards', JSON.stringify(cards));
-    } catch (e) { console.error("Cloud sync error:", e); }
+    } catch (e) { console.error(e); }
 }
 
 async function deleteCardFromCloud(id) {
     try {
         await supabase.from('orders').delete().eq('id', id);
         localStorage.setItem('lotus_crm_cards', JSON.stringify(cards));
-    } catch (e) { console.error("Cloud delete error:", e); }
+    } catch (e) { console.error(e); }
 }
 
-// Render Board
 function renderBoard() {
+    if (!boardEl) return;
     boardEl.innerHTML = '';
     
     const searchTerm = searchInput.value.toLowerCase();
     const filterMonth = monthFilter.value;
-    
     const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
     
     COLUMNS.forEach(col => {
         let colCards = cards.filter(c => c.status === col.id);
         
+        // Filters
         if (filterMonth !== 'all') {
             colCards = colCards.filter(c => {
                 const d = new Date(c.date);
-                if (filterMonth === 'current') return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+                if (filterMonth === 'current') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
                 if (filterMonth === 'last') {
-                    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-                    const lastYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-                    return d.getMonth() === lastMonth && d.getFullYear() === lastYear;
+                    const last = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                    return d.getMonth() === last.getMonth() && d.getFullYear() === last.getFullYear();
                 }
                 return true;
             });
@@ -133,12 +133,12 @@ function renderBoard() {
         
         if (searchTerm) {
             colCards = colCards.filter(c => 
-                c.customerName.toLowerCase().includes(searchTerm) ||
-                (c.phone && c.phone.includes(searchTerm))
+                (c.customerName || '').toLowerCase().includes(searchTerm) ||
+                (c.phone || '').includes(searchTerm)
             );
         }
         
-        const colTotal = colCards.reduce((sum, c) => sum + c.amount, 0);
+        const colTotal = colCards.reduce((sum, c) => sum + (c.amount || 0), 0);
         const formatCurrency = val => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
         
         const colEl = document.createElement('div');
@@ -165,9 +165,6 @@ function renderBoard() {
     updateDashboardStats();
 }
 
-searchInput.addEventListener('input', renderBoard);
-monthFilter.addEventListener('change', renderBoard);
-
 function createCardHTML(card) {
     const formattedDate = new Date(card.date).toLocaleDateString('vi-VN');
     const formatCurrency = val => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
@@ -178,12 +175,12 @@ function createCardHTML(card) {
                 <span class="card-quote">#${card.quoteNumber || '---'}</span>
                 <span class="card-date">${formattedDate}</span>
             </div>
-            <div class="card-customer">${card.customerName}</div>
+            <div class="card-customer">${card.customerName || 'Khách hàng'}</div>
             <div class="card-info">
                 <span><i class="fa-solid fa-phone"></i> ${card.phone || '---'}</span>
             </div>
             <div class="card-footer">
-                <div class="card-amount">${formatCurrency(card.amount)}</div>
+                <div class="card-amount">${formatCurrency(card.amount || 0)}</div>
                 <button class="btn-delete" onclick="deleteCard('${card.id}')"><i class="fa-solid fa-trash"></i></button>
             </div>
         </div>
@@ -195,22 +192,22 @@ function setupDragAndDrop() {
     const columnBodies = document.querySelectorAll('.column-body');
     
     cardEls.forEach(card => {
-        card.addEventListener('dragstart', () => card.classList.add('dragging'));
-        card.addEventListener('dragend', () => card.classList.remove('dragging'));
+        card.ondragstart = () => card.classList.add('dragging');
+        card.ondragend = () => card.classList.remove('dragging');
     });
     
     columnBodies.forEach(body => {
-        body.addEventListener('dragover', e => {
+        body.ondragover = e => {
             e.preventDefault();
             body.classList.add('drag-over');
-        });
-        
-        body.addEventListener('dragleave', () => body.classList.remove('drag-over'));
-        
-        body.addEventListener('drop', async e => {
+        };
+        body.ondragleave = () => body.classList.remove('drag-over');
+        body.ondrop = async e => {
             e.preventDefault();
             body.classList.remove('drag-over');
             const draggingCard = document.querySelector('.dragging');
+            if (!draggingCard) return;
+            
             const cardId = draggingCard.dataset.id;
             const newStatus = body.parentElement.dataset.status;
             
@@ -220,20 +217,20 @@ function setupDragAndDrop() {
                 renderBoard();
                 await syncCardToCloud(cards[cardIndex]);
             }
-        });
+        };
     });
 }
 
-// Dashboard
 function updateDashboardStats() {
-    const totalRevenue = cards.filter(c => c.status === 'completed').reduce((sum, c) => sum + c.amount, 0);
-    const totalDebt = cards.filter(c => c.status === 'debt').reduce((sum, c) => sum + c.amount, 0);
+    const totalRevenue = cards.filter(c => c.status === 'completed').reduce((sum, c) => sum + (c.amount || 0), 0);
+    const totalDebt = cards.filter(c => c.status === 'debt').reduce((sum, c) => sum + (c.amount || 0), 0);
     
-    document.getElementById('total-revenue').textContent = new Intl.NumberFormat('vi-VN').format(totalRevenue) + ' đ';
-    document.getElementById('total-debt').textContent = new Intl.NumberFormat('vi-VN').format(totalDebt) + ' đ';
+    const revEl = document.getElementById('total-revenue');
+    const debtEl = document.getElementById('total-debt');
+    if (revEl) revEl.textContent = new Intl.NumberFormat('vi-VN').format(totalRevenue) + ' đ';
+    if (debtEl) debtEl.textContent = new Intl.NumberFormat('vi-VN').format(totalDebt) + ' đ';
 }
 
-// Actions
 async function deleteCard(id) {
     if (confirm('Bạn có chắc chắn muốn xoá đơn hàng này?')) {
         cards = cards.filter(c => c.id !== id);
@@ -242,20 +239,20 @@ async function deleteCard(id) {
     }
 }
 
-// Modals
-btnUpload.onclick = () => {
+// Event Listeners
+if (btnUpload) btnUpload.onclick = () => {
     uploadModal.classList.add('active');
     orderForm.classList.add('hidden');
     scanLoader.classList.add('hidden');
     uploadArea.classList.remove('hidden');
 };
 
-btnDashboard.onclick = () => {
+if (btnDashboard) btnDashboard.onclick = () => {
     updateDashboardStats();
     dashboardModal.classList.add('active');
 };
 
-btnSettings.onclick = () => {
+if (btnSettings) btnSettings.onclick = () => {
     apiKeyInput.value = localStorage.getItem('lotus_gemini_key') || '';
     settingsModal.classList.add('active');
 };
@@ -268,42 +265,29 @@ closeBtns.forEach(btn => {
     };
 });
 
-window.onclick = e => {
-    if (e.target === uploadModal) uploadModal.classList.remove('active');
-    if (e.target === dashboardModal) dashboardModal.classList.remove('active');
-    if (e.target === settingsModal) settingsModal.classList.remove('active');
-};
-
-btnSaveKey.onclick = () => {
+if (btnSaveKey) btnSaveKey.onclick = () => {
     localStorage.setItem('lotus_gemini_key', apiKeyInput.value.trim());
     settingsModal.classList.remove('active');
     alert('Đã lưu cấu hình!');
 };
 
-// AI Upload
-uploadArea.onclick = () => fileInput.click();
+if (uploadArea) uploadArea.onclick = () => fileInput.click();
 
-fileInput.onchange = async e => {
+if (fileInput) fileInput.onchange = async e => {
     const file = e.target.files[0];
     if (!file) return;
-    
     uploadArea.classList.add('hidden');
     scanLoader.classList.remove('hidden');
-    
     try {
         const base64 = await toBase64(file);
         const data = await scanImageWithGemini(base64.split(',')[1], file.type);
-        
         scanLoader.classList.add('hidden');
         orderForm.classList.remove('hidden');
-        
         document.getElementById('customerName').value = data.customerName || '';
         document.getElementById('phone').value = data.phone || '';
         document.getElementById('address').value = data.address || '';
         document.getElementById('quoteNumber').value = data.quoteNumber || '';
-        const cleanAmount = String(data.amount).replace(/[^0-9]/g, '');
-        document.getElementById('amount').value = cleanAmount || '';
-        
+        document.getElementById('amount').value = String(data.amount).replace(/[^0-9]/g, '') || '';
     } catch (err) {
         alert("Lỗi AI: " + err.message);
         scanLoader.classList.add('hidden');
@@ -321,7 +305,6 @@ const toBase64 = file => new Promise((resolve, reject) => {
 async function scanImageWithGemini(base64Image, mimeType) {
     const key = (localStorage.getItem('lotus_gemini_key') || '').trim();
     if (!key) throw new Error("Chưa có API Key");
-
     let availableModels = [];
     try {
         const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
@@ -330,13 +313,11 @@ async function scanImageWithGemini(base64Image, mimeType) {
             availableModels = listData.models.filter(m => m.supportedGenerationMethods.includes('generateContent'));
         }
     } catch(e) {}
-
     const priorityModels = [
         availableModels.find(m => m.name.includes('gemini-1.5-flash')),
         availableModels.find(m => m.name.includes('gemini-1.5-pro')),
         availableModels[0]
     ].filter(m => m);
-
     for (const model of priorityModels) {
         try {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${model.name.split('/').pop()}:generateContent?key=${key}`;
@@ -357,10 +338,10 @@ async function scanImageWithGemini(base64Image, mimeType) {
             }
         } catch (e) {}
     }
-    throw new Error("AI không thể đọc được ảnh này.");
+    throw new Error("AI đang bận, vui lòng thử lại.");
 }
 
-orderForm.onsubmit = async e => {
+if (orderForm) orderForm.onsubmit = async e => {
     e.preventDefault();
     const newCard = {
         id: Date.now().toString(),
@@ -372,12 +353,11 @@ orderForm.onsubmit = async e => {
         status: 'quote',
         date: new Date().toISOString()
     };
-    
     cards.unshift(newCard);
     renderBoard();
     uploadModal.classList.remove('active');
     await syncCardToCloud(newCard);
 };
 
-// Start
-initApp();
+// Start App
+document.addEventListener('DOMContentLoaded', initApp);
