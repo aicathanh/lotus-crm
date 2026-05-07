@@ -207,87 +207,72 @@
             var key = (localStorage.getItem('lotus_gemini_key') || '').trim();
             var scanStatus = document.getElementById('scan-status');
             var loader = document.getElementById('scan-loader');
+            var errorBox = document.getElementById('error-box');
+            var errorMsg = document.getElementById('error-msg');
             
             if (!key) {
                 loader.classList.add('hidden');
-                document.getElementById('error-box').classList.remove('hidden');
-                document.getElementById('error-msg').textContent = "LỖI: Chưa có mã API. Hãy vào Cài đặt để dán mã vào.";
+                errorBox.classList.remove('hidden');
+                errorMsg.textContent = "LỖI: Chưa có mã API. Hãy vào Cài đặt để dán mã vào.";
                 return;
             }
 
-            scanStatus.textContent = "AI đang khởi động...";
             loader.classList.remove('hidden');
+            errorBox.classList.add('hidden');
+            document.getElementById('order-form').classList.add('hidden');
+            scanStatus.textContent = "AI đang đọc báo giá (Vui lòng đợi 5-10 giây)...";
 
-            function proceedWithModel(targetModel) {
-                scanStatus.textContent = "AI đang đọc báo giá...";
-                var part = isImage ? { inlineData: { mimeType: "image/jpeg", data: data } } : { text: data };
-                var body = { 
-                    contents: [{ parts: [{ text: "Extract JSON: customerName, amount, products (string: Name(Qty), Name(Qty)...)" }, part] }], 
-                    safetySettings: [
-                        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" }, 
-                        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" }, 
-                        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" }, 
-                        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-                    ] 
-                };
+            var targetModel = isImage ? 'models/gemini-1.5-flash' : 'models/gemini-pro';
+            var part = isImage ? { inlineData: { mimeType: "image/jpeg", data: data } } : { text: data };
+            var body = { 
+                contents: [{ parts: [{ text: "Extract JSON: customerName, amount, products (string: Name(Qty), Name(Qty)...)" }, part] }], 
+                safetySettings: [
+                    { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" }, 
+                    { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" }, 
+                    { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" }, 
+                    { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+                ] 
+            };
 
-                var endpoints = [
-                    'https://generativelanguage.googleapis.com/v1beta/' + targetModel + ':generateContent?key=' + key,
-                    'https://generativelanguage.googleapis.com/v1/' + targetModel + ':generateContent?key=' + key
-                ];
+            var controller = new AbortController();
+            var timeoutId = setTimeout(function() { 
+                controller.abort(); 
+                loader.classList.add('hidden');
+                errorBox.classList.remove('hidden');
+                errorMsg.textContent = "LỖI: Kết nối quá chậm (Timeout). Vui lòng kiểm tra mạng và thử lại.";
+            }, 20000);
 
-                var epIdx = 0;
-                function tryFetch() {
-                    return fetch(endpoints[epIdx], { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-                    .then(function(res) { 
-                        return res.json().then(function(d) { 
-                            if (!res.ok) {
-                                if (res.status === 404 && epIdx < endpoints.length - 1) {
-                                    epIdx++;
-                                    return tryFetch();
-                                }
-                                throw new Error(d.error ? d.error.message : JSON.stringify(d));
-                            }
-                            return d;
-                        });
-                    });
-                }
-
-                tryFetch().then(function(d) {
-                    var text = d.candidates[0].content.parts[0].text;
-                    var json = JSON.parse(text.replace(/```json/g, '').replace(/```/g, '').trim());
+            fetch('https://generativelanguage.googleapis.com/v1beta/' + targetModel + ':generateContent?key=' + key, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(body),
+                signal: controller.signal
+            })
+            .then(function(res) { 
+                clearTimeout(timeoutId);
+                return res.json().then(function(d) { if (!res.ok) throw new Error(d.error ? d.error.message : "Lỗi API Google"); return d; });
+            })
+            .then(function(d) {
+                try {
+                    var rawText = d.candidates[0].content.parts[0].text;
+                    var cleanText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+                    var json = JSON.parse(cleanText);
+                    
                     loader.classList.add('hidden');
                     document.getElementById('order-form').classList.remove('hidden');
                     document.getElementById('customerName').value = json.customerName || '';
                     document.getElementById('amount').value = String(json.amount || '').replace(/[^0-9]/g, '') || '';
                     document.getElementById('products').value = json.products || '';
-                }).catch(function(err) {
-                    loader.classList.add('hidden');
-                    document.getElementById('error-box').classList.remove('hidden');
-                    document.getElementById('error-msg').textContent = "LỖI AI: " + err.message;
-                });
-            }
-
-            var discoveryTimeout = setTimeout(function() {
-                proceedWithModel(isImage ? 'models/gemini-1.5-flash' : 'models/gemini-pro');
-            }, 3000);
-
-            fetch('https://generativelanguage.googleapis.com/v1beta/models?key=' + key)
-            .then(function(res) { return res.json(); })
-            .then(function(d) {
-                clearTimeout(discoveryTimeout);
-                var models = d.models || [];
-                var targetModel = null;
-                if (isImage) {
-                    for(var i=0; i<models.length; i++) if (models[i].name.indexOf('1.5-flash') > -1) { targetModel = models[i].name; break; }
-                } else {
-                    for(var i=0; i<models.length; i++) if (models[i].name.indexOf('pro') > -1) { targetModel = models[i].name; break; }
+                } catch (e) {
+                    throw new Error("AI trả về dữ liệu không đúng định dạng. Hãy thử lại!");
                 }
-                proceedWithModel(targetModel || (isImage ? 'models/gemini-1.5-flash' : 'models/gemini-pro'));
             })
-            .catch(function() {
-                clearTimeout(discoveryTimeout);
-                proceedWithModel(isImage ? 'models/gemini-1.5-flash' : 'models/gemini-pro');
+            .catch(function(err) {
+                clearTimeout(timeoutId);
+                if (err.name === 'AbortError') return;
+                loader.classList.add('hidden');
+                errorBox.classList.remove('hidden');
+                errorMsg.textContent = "LỖI: " + err.message;
             });
         }
 
