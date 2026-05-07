@@ -1,7 +1,18 @@
 // Supabase Configuration
 const SUPABASE_URL = 'https://zbnnctvggpupdnjmydcu.supabase.co';
 const SUPABASE_KEY = 'sb_publishable__Uc7k0lfdHFzBjWT-3o36w_ydCDXOT8';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let supabase = null;
+try {
+    if (window.supabase) {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        console.log("Supabase initialized successfully.");
+    } else {
+        console.warn("Supabase library not found. Running in Local Mode.");
+    }
+} catch (e) {
+    console.error("Supabase init error:", e);
+}
 
 // State Management
 const COLUMNS = [
@@ -16,30 +27,35 @@ const COLUMNS = [
 let cards = [];
 
 // DOM Elements
-const boardEl = document.getElementById('board');
-const btnUpload = document.getElementById('btn-upload');
-const btnDashboard = document.getElementById('btn-dashboard');
-const btnSettings = document.getElementById('btn-settings');
-const uploadModal = document.getElementById('upload-modal');
-const dashboardModal = document.getElementById('dashboard-modal');
-const settingsModal = document.getElementById('settings-modal');
-const closeBtns = document.querySelectorAll('.close-btn, .close-modal');
-const searchInput = document.getElementById('search-input');
-const monthFilter = document.getElementById('month-filter');
-const apiKeyInput = document.getElementById('apiKeyInput');
-const btnSaveKey = document.getElementById('btn-save-key');
-
-const uploadArea = document.getElementById('upload-area');
-const fileInput = document.getElementById('file-input');
-const scanLoader = document.getElementById('scan-loader');
-const orderForm = document.getElementById('order-form');
+const getEl = id => document.getElementById(id);
+const boardEl = getEl('board');
+const btnUpload = getEl('btn-upload');
+const btnDashboard = getEl('btn-dashboard');
+const btnSettings = getEl('btn-settings');
+const uploadModal = getEl('upload-modal');
+const dashboardModal = getEl('dashboard-modal');
+const settingsModal = getEl('settings-modal');
+const searchInput = getEl('search-input');
+const monthFilter = getEl('month-filter');
+const apiKeyInput = getEl('apiKeyInput');
+const btnSaveKey = getEl('btn-save-key');
+const uploadArea = getEl('upload-area');
+const fileInput = getEl('file-input');
+const scanLoader = getEl('scan-loader');
+const orderForm = getEl('order-form');
 
 // Initialize App
 async function initApp() {
-    console.log("Initializing Lotus CRM Cloud...");
-    renderBoard(); // Render empty board first
-    await loadCardsFromCloud();
-    renderBoard();
+    console.log("App starting...");
+    renderBoard(); // Render immediately
+    
+    if (supabase) {
+        await loadCardsFromCloud();
+        renderBoard();
+    } else {
+        cards = JSON.parse(localStorage.getItem('lotus_crm_cards')) || [];
+        renderBoard();
+    }
 }
 
 async function loadCardsFromCloud() {
@@ -63,7 +79,6 @@ async function loadCardsFromCloud() {
                 date: item.created_at
             }));
         } else {
-            // Check for local migration
             const localData = JSON.parse(localStorage.getItem('lotus_crm_cards')) || [];
             if (localData.length > 0) {
                 cards = localData;
@@ -82,12 +97,13 @@ async function loadCardsFromCloud() {
         }
     } catch (e) {
         console.error("Cloud Error:", e);
-        // Fallback to local storage
         cards = JSON.parse(localStorage.getItem('lotus_crm_cards')) || [];
     }
 }
 
 async function syncCardToCloud(card) {
+    localStorage.setItem('lotus_crm_cards', JSON.stringify(cards));
+    if (!supabase) return;
     try {
         await supabase.from('orders').upsert({
             id: card.id,
@@ -98,15 +114,15 @@ async function syncCardToCloud(card) {
             amount: String(card.amount),
             status: card.status
         });
-        localStorage.setItem('lotus_crm_cards', JSON.stringify(cards));
-    } catch (e) { console.error("Sync Error:", e); }
+    } catch (e) { console.error(e); }
 }
 
 async function deleteCardFromCloud(id) {
+    localStorage.setItem('lotus_crm_cards', JSON.stringify(cards));
+    if (!supabase) return;
     try {
         await supabase.from('orders').delete().eq('id', id);
-        localStorage.setItem('lotus_crm_cards', JSON.stringify(cards));
-    } catch (e) { console.error("Delete Error:", e); }
+    } catch (e) { console.error(e); }
 }
 
 function renderBoard() {
@@ -120,25 +136,22 @@ function renderBoard() {
     COLUMNS.forEach(col => {
         let colCards = cards.filter(c => c.status === col.id);
         
-        // Month Filter
         if (filterMonth !== 'all') {
             colCards = colCards.filter(c => {
                 const d = new Date(c.date);
                 if (filterMonth === 'current') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
                 if (filterMonth === 'last') {
-                    const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                    return d.getMonth() === lastMonthDate.getMonth() && d.getFullYear() === lastMonthDate.getFullYear();
+                    const last = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                    return d.getMonth() === last.getMonth() && d.getFullYear() === last.getFullYear();
                 }
                 return true;
             });
         }
         
-        // Search Filter
         if (searchTerm) {
             colCards = colCards.filter(c => 
                 (c.customerName || '').toLowerCase().includes(searchTerm) ||
-                (c.phone || '').includes(searchTerm) ||
-                (c.quoteNumber || '').toLowerCase().includes(searchTerm)
+                (c.phone || '').includes(searchTerm)
             );
         }
         
@@ -211,15 +224,13 @@ function setupDragAndDrop() {
             body.classList.remove('drag-over');
             const draggingCard = document.querySelector('.dragging');
             if (!draggingCard) return;
-            
             const cardId = draggingCard.dataset.id;
             const newStatus = body.parentElement.dataset.status;
-            
-            const cardIndex = cards.findIndex(c => c.id === cardId);
-            if (cardIndex > -1) {
-                cards[cardIndex].status = newStatus;
+            const idx = cards.findIndex(c => c.id === cardId);
+            if (idx > -1) {
+                cards[idx].status = newStatus;
                 renderBoard();
-                await syncCardToCloud(cards[cardIndex]);
+                await syncCardToCloud(cards[idx]);
             }
         };
     });
@@ -227,15 +238,13 @@ function setupDragAndDrop() {
 
 function updateDashboardStats() {
     const formatCurrency = val => new Intl.NumberFormat('vi-VN').format(val) + ' đ';
-    
     const totalQuote = cards.filter(c => c.status === 'quote').reduce((sum, c) => sum + (c.amount || 0), 0);
     const totalCompleted = cards.filter(c => c.status === 'completed' || c.status === 'paid').reduce((sum, c) => sum + (c.amount || 0), 0);
     const totalDebt = cards.filter(c => c.status === 'debt').reduce((sum, c) => sum + (c.amount || 0), 0);
     
-    const quoteEl = document.getElementById('stat-quote');
-    const completedEl = document.getElementById('stat-completed');
-    const debtEl = document.getElementById('stat-debt');
-    
+    const quoteEl = getEl('stat-quote');
+    const completedEl = getEl('stat-completed');
+    const debtEl = getEl('stat-debt');
     if (quoteEl) quoteEl.textContent = formatCurrency(totalQuote);
     if (completedEl) completedEl.textContent = formatCurrency(totalCompleted);
     if (debtEl) debtEl.textContent = formatCurrency(totalDebt);
@@ -249,60 +258,49 @@ async function deleteCard(id) {
     }
 }
 
-// UI Event Handlers
+// Handlers
 if (btnUpload) btnUpload.onclick = () => {
     uploadModal.classList.add('active');
     orderForm.classList.add('hidden');
     scanLoader.classList.add('hidden');
     uploadArea.classList.remove('hidden');
 };
-
 if (btnDashboard) btnDashboard.onclick = () => {
     updateDashboardStats();
     dashboardModal.classList.add('active');
 };
-
 if (btnSettings) btnSettings.onclick = () => {
     apiKeyInput.value = localStorage.getItem('lotus_gemini_key') || '';
     settingsModal.classList.add('active');
 };
-
-closeBtns.forEach(btn => {
+document.querySelectorAll('.close-btn, .close-modal').forEach(btn => {
     btn.onclick = () => {
         uploadModal.classList.remove('active');
         dashboardModal.classList.remove('active');
         settingsModal.classList.remove('active');
     };
 });
-
 if (btnSaveKey) btnSaveKey.onclick = () => {
     localStorage.setItem('lotus_gemini_key', apiKeyInput.value.trim());
     settingsModal.classList.remove('active');
     alert('Đã lưu cấu hình AI!');
 };
-
 if (uploadArea) uploadArea.onclick = () => fileInput.click();
-
 if (fileInput) fileInput.onchange = async e => {
     const file = e.target.files[0];
     if (!file) return;
-    
     uploadArea.classList.add('hidden');
     scanLoader.classList.remove('hidden');
-    
     try {
         const base64 = await toBase64(file);
         const data = await scanImageWithGemini(base64.split(',')[1], file.type);
-        
         scanLoader.classList.add('hidden');
         orderForm.classList.remove('hidden');
-        
-        document.getElementById('customerName').value = data.customerName || '';
-        document.getElementById('phone').value = data.phone || '';
-        document.getElementById('address').value = data.address || '';
-        document.getElementById('quoteNumber').value = data.quoteNumber || '';
-        document.getElementById('amount').value = String(data.amount).replace(/[^0-9]/g, '') || '';
-        
+        getEl('customerName').value = data.customerName || '';
+        getEl('phone').value = data.phone || '';
+        getEl('address').value = data.address || '';
+        getEl('quoteNumber').value = data.quoteNumber || '';
+        getEl('amount').value = String(data.amount).replace(/[^0-9]/g, '') || '';
     } catch (err) {
         alert("Lỗi AI: " + err.message);
         scanLoader.classList.add('hidden');
@@ -320,7 +318,6 @@ const toBase64 = file => new Promise((resolve, reject) => {
 async function scanImageWithGemini(base64Image, mimeType) {
     const key = (localStorage.getItem('lotus_gemini_key') || '').trim();
     if (!key) throw new Error("Chưa có API Key");
-
     let availableModels = [];
     try {
         const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
@@ -329,13 +326,11 @@ async function scanImageWithGemini(base64Image, mimeType) {
             availableModels = listData.models.filter(m => m.supportedGenerationMethods.includes('generateContent'));
         }
     } catch(e) {}
-
     const priorityModels = [
         availableModels.find(m => m.name.includes('gemini-1.5-flash')),
         availableModels.find(m => m.name.includes('gemini-1.5-pro')),
         availableModels[0]
     ].filter(m => m);
-
     for (const model of priorityModels) {
         try {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${model.name.split('/').pop()}:generateContent?key=${key}`;
@@ -345,7 +340,7 @@ async function scanImageWithGemini(base64Image, mimeType) {
                 body: JSON.stringify({
                     contents: [{ parts: [
                         { text: "Trích xuất JSON: customerName, phone, address, quoteNumber, amount (số)" },
-                        { inlineData: { mimeType: mimeType, data: base64Image } }
+                        { inlineData: { mimeType, data: base64Image } }
                     ] }]
                 })
             });
@@ -356,22 +351,21 @@ async function scanImageWithGemini(base64Image, mimeType) {
             }
         } catch (e) {}
     }
-    throw new Error("AI đang bận, vui lòng thử lại sau giây lát.");
+    throw new Error("AI đang bận.");
 }
 
 if (orderForm) orderForm.onsubmit = async e => {
     e.preventDefault();
     const newCard = {
         id: Date.now().toString(),
-        customerName: document.getElementById('customerName').value,
-        phone: document.getElementById('phone').value,
-        address: document.getElementById('address').value,
-        quoteNumber: document.getElementById('quoteNumber').value,
-        amount: parseInt(document.getElementById('amount').value) || 0,
+        customerName: getEl('customerName').value,
+        phone: getEl('phone').value,
+        address: getEl('address').value,
+        quoteNumber: getEl('quoteNumber').value,
+        amount: parseInt(getEl('amount').value) || 0,
         status: 'quote',
         date: new Date().toISOString()
     };
-    
     cards.unshift(newCard);
     renderBoard();
     uploadModal.classList.remove('active');
@@ -381,5 +375,5 @@ if (orderForm) orderForm.onsubmit = async e => {
 if (searchInput) searchInput.oninput = renderBoard;
 if (monthFilter) monthFilter.onchange = renderBoard;
 
-// Start App
+// Start
 initApp();
