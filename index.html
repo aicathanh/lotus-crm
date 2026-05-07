@@ -157,15 +157,16 @@
 
             loader.classList.remove('hidden');
             document.getElementById('order-form').classList.add('hidden');
-            scanStatus.textContent = "Đang kiểm tra AI...";
+            scanStatus.textContent = "Đang nạp kiến thức sản phẩm...";
 
-            // 1. Discover Models First
+            // Nạp danh sách sản phẩm để AI đối chiếu
+            var productContext = "MASTER PRODUCT LIST (Match extracted items to these): Keo Tram Tret 1K, Matic Trong Suot, Lot Trong Suot, Lot Trang, Son Lau Go, Mau Bet, Son 2in1, Phu Bong Lacquer, Phu Bong PUD, Lot 2K, Phu Bong 2K, Son Sat 2in1 (Size: 1, 5, 20kg). Hardener (0.1, 0.5, 1kg).";
+
             fetch('https://generativelanguage.googleapis.com/v1beta/models?key=' + key)
             .then(function(res) { return res.json(); })
             .then(function(d) {
                 var models = d.models || [];
                 var targetModel = null;
-                // Prefer 1.5-flash, then 1.5-pro, then any flash, then any pro
                 var priorities = ['1.5-flash', '1.5-pro', 'flash', 'pro'];
                 for(var p=0; p<priorities.length; p++) {
                     for(var i=0; i<models.length; i++) {
@@ -181,9 +182,9 @@
             .catch(function() { proceedWithAI(isImage ? 'models/gemini-1.5-flash' : 'models/gemini-pro'); });
 
             function proceedWithAI(modelName) {
-                scanStatus.textContent = "AI đang đọc báo giá...";
+                scanStatus.textContent = "AI đang đọc báo giá & đối chiếu kho...";
                 var body = { 
-                    contents: [{ parts: [{ text: "Extract JSON: customerName, amount, products (Name(Qty), Name(Qty)...)" }, isImage ? { inlineData: { mimeType: "image/jpeg", data: data } } : { text: data }] }],
+                    contents: [{ parts: [{ text: "Extract JSON: customerName, amount (total), products (Format: ProductName(Size-Qty)). Reference these products: " + productContext }, isImage ? { inlineData: { mimeType: "image/jpeg", data: data } } : { text: data }] }],
                     safetySettings: [{ category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" }, { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" }, { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" }, { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }]
                 };
 
