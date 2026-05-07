@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lotus CRM - v8.4 Truth</title>
+    <title>Lotus CRM - Bản Chính Thức</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
@@ -11,55 +11,72 @@
         .modal-overlay { display: none !important; }
         .modal-overlay.active { display: flex !important; opacity: 1 !important; pointer-events: auto !important; }
         .app-header { z-index: 10000 !important; position: relative !important; }
-        #debug-tag { background: #FFFFFF !important; color: #000000 !important; border: 1px solid #000; }
+        #debug-tag { background: var(--primary) !important; color: #FFFFFF !important; }
+        .magic-paste-area { width: 100%; height: 100px; padding: 12px; border: 2px dashed var(--primary); border-radius: 8px; font-size: 13px; margin-top: 10px; background: #F0FDFA; transition: all 0.3s; }
+        .magic-paste-area:focus { border-style: solid; outline: none; background: #FFF; }
         .error-detail { margin-top: 10px; font-family: monospace; font-size: 11px; padding: 10px; background: #FFF1F2; border: 1px solid #FDA4AF; color: #9F1239; border-radius: 4px; white-space: pre-wrap; word-break: break-all; }
-        .magic-paste-area { width: 100%; height: 100px; padding: 12px; border: 2px solid var(--primary); border-radius: 8px; font-size: 13px; margin-top: 10px; background: #F0FDFA; }
-        .diagnostic-step { font-size: 11px; color: #666; margin-top: 5px; font-style: italic; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-    <div id="debug-tag" style="position:fixed; top:0; left:0; font-size:10px; padding:2px 8px; z-index:10001; border-radius: 0 0 4px 0; font-weight:bold;">v8.4 - Truth</div>
+    <div id="debug-tag" style="position:fixed; top:0; left:0; font-size:10px; padding:2px 8px; z-index:10001; border-radius: 0 0 4px 0; font-weight:bold;">v1.0 - Bản Chính Thức</div>
 
     <div class="app-container">
         <header class="app-header">
             <div class="logo"><i class="fa-solid fa-leaf"></i> <span>Lotus CRM</span></div>
-            <div class="header-filters"><div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="search-input" oninput="renderBoard()" placeholder="Tìm kiếm..."></div></div>
+            <div class="header-filters"><div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="search-input" oninput="renderBoard()" placeholder="Tìm kiếm tên khách, SĐT..."></div></div>
             <div class="header-actions">
-                <button class="btn btn-outline" onclick="openSettings()"><i class="fa-solid fa-gear"></i></button>
+                <button class="btn btn-outline" onclick="openSettings()" title="Cài đặt"><i class="fa-solid fa-gear"></i></button>
                 <button class="btn btn-primary" onclick="openUpload()"><i class="fa-solid fa-cloud-arrow-up"></i> Tải Báo Giá</button>
             </div>
         </header>
 
-        <main class="board" id="board"><div class="column" data-status="quote"><div class="column-header" style="border-top-color: var(--tag-quote)"><div class="column-header-top"><span>Báo Giá</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-quote"></div></div><div class="column" data-status="confirm"><div class="column-header" style="border-top-color: var(--tag-confirm)"><div class="column-header-top"><span>Chốt Đơn</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-confirm"></div></div><div class="column" data-status="deliver"><div class="column-header" style="border-top-color: var(--tag-deliver)"><div class="column-header-top"><span>Đã Giao</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-deliver"></div></div><div class="column" data-status="paid"><div class="column-header" style="border-top-color: var(--tag-paid)"><div class="column-header-top"><span>Đã Thu Tiền</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-paid"></div></div><div class="column" data-status="debt"><div class="column-header" style="border-top-color: var(--tag-debt)"><div class="column-header-top"><span>Công Nợ</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-debt"></div></div><div class="column" data-status="completed"><div class="column-header" style="border-top-color: #0F766E"><div class="column-header-top"><span>Hoàn Tất</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-completed"></div></div></main>
+        <main class="board" id="board">
+            <div class="column" data-status="quote"><div class="column-header" style="border-top-color: var(--tag-quote)"><div class="column-header-top"><span>Báo Giá</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-quote"></div></div>
+            <div class="column" data-status="confirm"><div class="column-header" style="border-top-color: var(--tag-confirm)"><div class="column-header-top"><span>Chốt Đơn</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-confirm"></div></div>
+            <div class="column" data-status="deliver"><div class="column-header" style="border-top-color: var(--tag-deliver)"><div class="column-header-top"><span>Đã Giao</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-deliver"></div></div>
+            <div class="column" data-status="paid"><div class="column-header" style="border-top-color: var(--tag-paid)"><div class="column-header-top"><span>Đã Thu Tiền</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-paid"></div></div>
+            <div class="column" data-status="debt"><div class="column-header" style="border-top-color: var(--tag-debt)"><div class="column-header-top"><span>Công Nợ</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-debt"></div></div>
+            <div class="column" data-status="completed"><div class="column-header" style="border-top-color: #0F766E"><div class="column-header-top"><span>Hoàn Tất</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-completed"></div></div>
+        </main>
     </div>
 
-    <div class="modal-overlay" id="settings-modal"><div class="modal"><div class="modal-header"><h3>Cài đặt AI</h3><button class="close-btn" onclick="closeAll()"><i class="fa-solid fa-xmark"></i></button></div><div class="modal-body">
-        <div class="form-group"><label>Google Gemini API Key (Mã VIP 8 triệu)</label><input type="password" id="apiKeyInput" placeholder="Dán mã vào đây..."></div>
+    <!-- Modals -->
+    <div class="modal-overlay" id="settings-modal"><div class="modal"><div class="modal-header"><h3>Cấu hình Hệ thống</h3><button class="close-btn" onclick="closeAll()"><i class="fa-solid fa-xmark"></i></button></div><div class="modal-body">
+        <div class="form-group"><label>Google Gemini API Key</label><input type="password" id="apiKeyInput" placeholder="Dán mã API của bạn vào đây..."></div>
+        <p style="font-size:11px; color:#666; margin-top:5px;">Lưu ý: Sử dụng API Key từ một Project mới trong AI Studio để có hiệu suất tốt nhất.</p>
         <div class="form-actions" style="margin-top:15px;"><button class="btn btn-primary" onclick="saveKey()">Lưu Cấu Hình</button></div>
     </div></div></div>
     
-    <div class="modal-overlay" id="upload-modal"><div class="modal"><div class="modal-header"><h3>Tải Báo Giá</h3><button class="close-btn" onclick="closeAll()"><i class="fa-solid fa-xmark"></i></button></div><div class="modal-body">
+    <div class="modal-overlay" id="upload-modal"><div class="modal"><div class="modal-header"><h3>Tải Lên Báo Giá</h3><button class="close-btn" onclick="closeAll()"><i class="fa-solid fa-xmark"></i></button></div><div class="modal-body">
         <div id="upload-main-area">
             <div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()">
                 <input type="file" id="file-input" accept="image/*" hidden onchange="handleFile(this.files[0])">
                 <i class="fa-regular fa-image upload-icon"></i>
-                <p>Nhấn hoặc Kéo thả ảnh báo giá</p>
+                <p>Nhấn để chọn ảnh báo giá hoặc kéo thả vào đây</p>
             </div>
-            <div style="text-align: center; margin-top:10px;">
-                <textarea class="magic-paste-area" id="magic-paste" placeholder="Hoặc dán văn bản copy từ ảnh vào đây (Chắc chắn 100% được)..." oninput="handleMagicPaste(this.value)"></textarea>
+            <div style="text-align: center; margin-top:15px;">
+                <p style="font-size:13px; font-weight:600; color:var(--primary); margin-bottom:10px;">Hoặc Dán Văn Bản Từ Ảnh</p>
+                <textarea class="magic-paste-area" id="magic-paste" placeholder="Copy nội dung chữ từ ảnh báo giá và dán vào đây để AI tự động điền đơn hàng..." oninput="handleMagicPaste(this.value)"></textarea>
             </div>
         </div>
-        <div id="scan-loader" class="scan-loader hidden"><div class="spinner"></div><p id="scan-status">Đang truy tìm mô hình AI phù hợp...</p><div id="diagnostic-log" class="diagnostic-step"></div></div>
+        <div id="scan-loader" class="scan-loader hidden"><div class="spinner"></div><p id="scan-status">AI đang phân tích dữ liệu báo giá...</p></div>
         <div id="error-box" class="hidden">
             <div class="error-detail" id="error-msg"></div>
             <div style="text-align: center; margin-top: 15px;">
-                <button class="btn btn-primary" onclick="openUpload()">Dùng "Dán Văn Bản" (Cách dự phòng tốt nhất)</button>
+                <button class="btn btn-primary" onclick="openUpload()">Thử Lại Hoặc Dán Văn Bản</button>
+                <button class="btn btn-outline" onclick="openManualForm()" style="margin-top:10px; width:100%;">Nhập Thủ Công</button>
             </div>
         </div>
         <form id="order-form" class="hidden" onsubmit="saveOrder(event)">
-            <div class="form-grid"><div class="form-group"><label>Tên Khách</label><input type="text" id="customerName" required></div><div class="form-group"><label>SĐT</label><input type="text" id="phone"></div><div class="form-group full-width"><label>Địa Chỉ</label><input type="text" id="address"></div><div class="form-group"><label>Số Báo Giá</label><input type="text" id="quoteNumber"></div><div class="form-group"><label>Tổng Tiền</label><input type="text" id="amount" required></div></div>
-            <div class="form-actions"><button type="button" class="btn btn-outline" onclick="closeAll()">Hủy</button><button type="submit" class="btn btn-primary">Lưu Đơn</button></div>
+            <div class="form-grid">
+                <div class="form-group"><label>Tên Khách Hàng</label><input type="text" id="customerName" required></div>
+                <div class="form-group"><label>Số Điện Thoại</label><input type="text" id="phone"></div>
+                <div class="form-group full-width"><label>Địa Chỉ Giao Hàng</label><input type="text" id="address"></div>
+                <div class="form-group"><label>Số Báo Giá / Mã Đơn</label><input type="text" id="quoteNumber"></div>
+                <div class="form-group"><label>Tổng Tiền (VNĐ)</label><input type="text" id="amount" required></div>
+            </div>
+            <div class="form-actions"><button type="button" class="btn btn-outline" onclick="closeAll()">Hủy</button><button type="submit" class="btn btn-primary">Lưu Đơn Hàng</button></div>
         </form>
     </div></div></div>
 
@@ -72,7 +89,8 @@
         function closeAll() { var ms = document.querySelectorAll('.modal-overlay'); for(var i=0; i<ms.length; i++) ms[i].classList.remove('active'); }
         function openSettings() { document.getElementById('apiKeyInput').value = localStorage.getItem('lotus_gemini_key') || ''; document.getElementById('settings-modal').classList.add('active'); }
         function openUpload() { document.getElementById('upload-modal').classList.add('active'); document.getElementById('upload-main-area').classList.remove('hidden'); document.getElementById('order-form').classList.add('hidden'); document.getElementById('scan-loader').classList.add('hidden'); document.getElementById('error-box').classList.add('hidden'); document.getElementById('magic-paste').value = ''; }
-        function saveKey() { localStorage.setItem('lotus_gemini_key', document.getElementById('apiKeyInput').value.trim()); alert('Đã lưu mã!'); closeAll(); }
+        function openManualForm() { document.getElementById('upload-main-area').classList.add('hidden'); document.getElementById('scan-loader').classList.add('hidden'); document.getElementById('error-box').classList.add('hidden'); document.getElementById('order-form').classList.remove('hidden'); document.getElementById('order-form').reset(); }
+        function saveKey() { localStorage.setItem('lotus_gemini_key', document.getElementById('apiKeyInput').value.trim()); alert('Đã lưu cấu hình AI!'); closeAll(); }
         function saveLocal() { localStorage.setItem('lotus_crm_cards', JSON.stringify(cards)); }
 
         function renderBoard() {
@@ -81,7 +99,7 @@
             states.forEach(function(st) {
                 var b = document.getElementById('col-' + st); if (!b) return; b.innerHTML = '';
                 var list = cards.filter(function(c) { return c.status === st; });
-                if (search) list = list.filter(function(c) { return (c.customerName || '').toLowerCase().indexOf(search) > -1 || (c.phone || '').indexOf(search) > -1; });
+                if (search) list = list.filter(function(c) { return (c.customerName || '').toLowerCase().indexOf(search) > -1 || (c.phone || '').indexOf(search) > -1 || (c.quoteNumber || '').toLowerCase().indexOf(search) > -1; });
                 var h = b.parentElement; var sum = 0; list.forEach(function(item) { sum += (Number(item.amount) || 0); });
                 h.querySelector('.col-count').textContent = list.length; h.querySelector('.col-total').textContent = new Intl.NumberFormat('vi-VN').format(sum) + ' đ';
                 list.forEach(function(c) {
@@ -122,32 +140,18 @@
 
         function callAI(data, isImage) {
             var key = (localStorage.getItem('lotus_gemini_key') || '').trim();
-            document.getElementById('diagnostic-log').textContent = "Đang hỏi Google về các mô hình có sẵn...";
             
-            // DISCOVER MODELS
             fetch('https://generativelanguage.googleapis.com/v1beta/models?key=' + key)
             .then(function(res) { return res.json(); })
             .then(function(d) {
                 var models = d.models || [];
                 var targetModel = null;
                 if (isImage) {
-                    // Find Flash or Vision
-                    for(var i=0; i<models.length; i++) {
-                        if (models[i].name.indexOf('flash') > -1 || models[i].name.indexOf('vision') > -1) {
-                            targetModel = models[i].name; break;
-                        }
-                    }
+                    for(var i=0; i<models.length; i++) if (models[i].name.indexOf('1.5-flash') > -1) { targetModel = models[i].name; break; }
                 } else {
-                    // Find Pro or Text
-                    for(var i=0; i<models.length; i++) {
-                        if (models[i].name.indexOf('pro') > -1) {
-                            targetModel = models[i].name; break;
-                        }
-                    }
+                    for(var i=0; i<models.length; i++) if (models[i].name.indexOf('pro') > -1) { targetModel = models[i].name; break; }
                 }
-                
                 if (!targetModel) targetModel = isImage ? 'models/gemini-1.5-flash' : 'models/gemini-pro';
-                document.getElementById('diagnostic-log').textContent = "Đang dùng mô hình: " + targetModel;
                 
                 var part = isImage ? { inlineData: { mimeType: "image/jpeg", data: data } } : { text: data };
                 var body = { contents: [{ parts: [{ text: "Extract JSON: customerName, phone, address, quoteNumber, amount" }, part] }], safetySettings: [{ category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" }, { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" }, { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" }, { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }] };
@@ -168,7 +172,9 @@
             }).catch(function(err) {
                 document.getElementById('scan-loader').classList.add('hidden');
                 document.getElementById('error-box').classList.remove('hidden');
-                document.getElementById('error-msg').textContent = "LỖI HỆ THỐNG:\n" + err.message;
+                var msg = "LỖI: ";
+                try { var e = JSON.parse(err.message); msg += e.message; } catch(x) { msg += err.message; }
+                document.getElementById('error-msg').textContent = msg;
             });
         }
 
