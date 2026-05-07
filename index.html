@@ -151,18 +151,53 @@
 
         function callAI(data, isImage) {
             var key = (localStorage.getItem('lotus_gemini_key') || '').trim();
+            var scanStatus = document.getElementById('scan-status');
+            var loader = document.getElementById('scan-loader');
+            
             if (!key) { alert('Thiếu API Key!'); openUpload(); return; }
-            var body = { contents: [{ parts: [{ text: "Extract JSON: customerName, amount, products" }, isImage ? { inlineData: { mimeType: "image/jpeg", data: data } } : { text: data }] }] };
-            fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + key, { method: 'POST', body: JSON.stringify(body) })
-            .then(function(res) { return res.json(); })
+
+            loader.classList.remove('hidden');
+            document.getElementById('order-form').classList.add('hidden');
+            scanStatus.textContent = "AI đang xử lý báo giá...";
+
+            var body = { 
+                contents: [{ parts: [{ text: "Extract JSON: customerName, amount, products (string: Name(Qty), Name(Qty)...)" }, isImage ? { inlineData: { mimeType: "image/jpeg", data: data } } : { text: data }] }],
+                safetySettings: [
+                    { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+                    { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+                    { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+                    { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+                ]
+            };
+
+            fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + key, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body) 
+            })
+            .then(function(res) { 
+                return res.json().then(function(d) { 
+                    if (!res.ok) throw new Error(d.error ? d.error.message : "Lỗi từ Google");
+                    return d; 
+                });
+            })
             .then(function(d) {
-                var json = JSON.parse(d.candidates[0].content.parts[0].text.replace(/```json/g, '').replace(/```/g, '').trim());
-                document.getElementById('scan-loader').classList.add('hidden');
+                if (!d.candidates || d.candidates.length === 0) {
+                    throw new Error("AI không thể đọc được ảnh này (Có thể do ảnh mờ hoặc bị chặn nội dung).");
+                }
+                var rawText = d.candidates[0].content.parts[0].text;
+                var json = JSON.parse(rawText.replace(/```json/g, '').replace(/```/g, '').trim());
+                
+                loader.classList.add('hidden');
                 document.getElementById('order-form').classList.remove('hidden');
                 document.getElementById('customerName').value = json.customerName || '';
                 document.getElementById('amount').value = String(json.amount || '').replace(/[^0-9]/g, '');
                 document.getElementById('products').value = json.products || '';
-            }).catch(function(e) { alert('Lỗi AI: ' + e.message); openUpload(); });
+            }).catch(function(e) { 
+                loader.classList.add('hidden');
+                alert('Lỗi AI: ' + e.message); 
+                openUpload(); 
+            });
         }
 
         function saveOrder(e) { e.preventDefault(); var c = { id: Date.now().toString(), customerName: document.getElementById('customerName').value, amount: parseInt(document.getElementById('amount').value) || 0, products: document.getElementById('products').value, status: 'quote', date: new Date().toISOString() }; cards.unshift(c); saveLocal(); closeAll(); }
