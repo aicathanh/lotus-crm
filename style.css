@@ -508,3 +508,27 @@ body {
     background-color: #F0F9FF !important;
 }
 
+/* Login Overlay */
+#login-overlay {
+    position: fixed;
+    inset: 0;
+    background: #1e293b;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    color: white;
+}
+
+#login-overlay .login-card {
+    background: white;
+    padding: 30px;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 380px;
+    text-align: center;
+    color: #1e293b;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+

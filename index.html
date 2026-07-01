@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
+    <script>
+        window.location.replace("https://app-bao-gia-son.vercel.app/mini-crm/index.html");
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lotus CRM v2.4 - Siêu Kết Nối</title>
@@ -70,23 +73,47 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-    <div class="app-header">
-        <div class="logo"><i class="fa-solid fa-leaf"></i> <span>Lotus CRM <span class="status-tag">Kết Nối v2.4</span></span></div>
-        <div class="header-actions">
-            <button class="btn btn-sync" id="sync-btn" onclick="syncOnline()"><i class="fa-solid fa-cloud-arrow-up"></i> Cập nhật Online</button>
-            <button class="btn btn-outline" onclick="openDashboard()"><i class="fa-solid fa-chart-pie"></i></button>
-            <button class="btn btn-outline" onclick="openSettings()"><i class="fa-solid fa-gear"></i></button>
-            <button class="btn btn-primary" onclick="openUpload()"><i class="fa-solid fa-plus"></i></button>
+    <!-- Login Overlay -->
+    <div id="login-overlay">
+        <div class="login-card">
+            <div style="background: #eff6ff; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;"><i class="fa-solid fa-shield-halved" style="color: #2563eb; font-size: 28px;"></i></div>
+            <h2 style="margin-bottom: 8px; font-weight: 800; font-size: 1.3rem;">Lotus CRM Secure</h2>
+            <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 25px;">Đăng nhập bằng tài khoản Google được phê duyệt để truy cập hệ thống.</p>
+            
+            <button id="google-login-btn" class="btn" style="width: 100%; padding: 12px; background: white; color: #374151; border: 1px solid #d1d5db; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05); margin: 0 auto;">
+                <svg width="18" height="18" viewBox="0 0 18 18">
+                    <path fill="#4285F4" d="M17.64 9.2c0-.63-.06-1.25-.16-1.84H9v3.47h4.84c-.21 1.12-.84 2.07-1.79 2.7v2.24h2.9c1.7-1.57 2.69-3.88 2.69-6.57z"/>
+                    <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.23l-2.9-2.24c-.8.54-1.84.87-3.06.87-2.35 0-4.34-1.59-5.05-3.73H.95v2.3C2.43 15.89 5.5 18 9 18z"/>
+                    <path fill="#FBBC05" d="M3.95 10.67A5.4 5.4 0 0 1 3.6 9c0-.58.1-1.15.28-1.67V5.03H.95A8.99 8.99 0 0 0 0 9c0 1.45.35 2.82.95 4.03l3-2.36z"/>
+                    <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35L15 2.4A8.99 8.99 0 0 0 9 0C5.5 0 2.43 2.11.95 4.03l3 2.36C4.66 5.17 6.65 3.58 9 3.58z"/>
+                </svg>
+                Đăng nhập với Google
+            </button>
+            
+            <p id="login-err" style="color: #ef4444; font-size: 0.8rem; margin-top: 15px; display: none; background: #fee2e2; padding: 10px; border-radius: 6px; border: 1px solid #fecaca; font-weight: 600;"></p>
         </div>
     </div>
 
-    <main class="board" id="board">
-        <div class="column" data-status="quote"><div class="column-header"><div class="column-title"><span>Báo Giá</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-quote"></div></div>
-        <div class="column" data-status="confirm"><div class="column-header"><div class="column-title"><span>Chốt Đơn</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-confirm"></div></div>
-        <div class="column" data-status="paid"><div class="column-header"><div class="column-title"><span>Đã Thu Tiền</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-paid"></div></div>
-        <div class="column" data-status="debt"><div class="column-header"><div class="column-title"><span>Công Nợ</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-debt"></div></div>
-        <div class="column" data-status="completed"><div class="column-header"><div class="column-title"><span>Hoàn Tất</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-completed"></div></div>
-    </main>
+    <div id="main-app" style="display: none;">
+        <div class="app-header">
+            <div class="logo"><i class="fa-solid fa-leaf"></i> <span>Lotus CRM <span class="status-tag">Kết Nối v2.4</span></span></div>
+            <div class="header-actions">
+                <button class="btn btn-sync" id="sync-btn" onclick="syncOnline()"><i class="fa-solid fa-cloud-arrow-up"></i> Cập nhật Online</button>
+                <button class="btn btn-outline" onclick="openDashboard()"><i class="fa-solid fa-chart-pie"></i></button>
+                <button class="btn btn-outline" onclick="openSettings()"><i class="fa-solid fa-gear"></i></button>
+                <button class="btn btn-outline" onclick="logout()" title="Thoát"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+                <button class="btn btn-primary" onclick="openUpload()"><i class="fa-solid fa-plus"></i></button>
+            </div>
+        </div>
+
+        <main class="board" id="board">
+            <div class="column" data-status="quote"><div class="column-header"><div class="column-title"><span>Báo Giá</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-quote"></div></div>
+            <div class="column" data-status="confirm"><div class="column-header"><div class="column-title"><span>Chốt Đơn</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-confirm"></div></div>
+            <div class="column" data-status="paid"><div class="column-header"><div class="column-title"><span>Đã Thu Tiền</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-paid"></div></div>
+            <div class="column" data-status="debt"><div class="column-header"><div class="column-title"><span>Công Nợ</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-debt"></div></div>
+            <div class="column" data-status="completed"><div class="column-header"><div class="column-title"><span>Hoàn Tất</span><span class="col-count">0</span></div><div class="col-total">0 đ</div></div><div class="column-body" id="col-completed"></div></div>
+        </main>
+    </div>
 
     <!-- Modals -->
     <div class="modal-overlay" id="sync-modal"><div class="modal" style="text-align:center;"><div id="sync-loading"><div class="spinner"></div><p style="font-weight:700;">Đang đồng bộ dữ liệu lên mây...</p></div><div id="sync-success" class="hidden"><i class="fa-solid fa-circle-check" style="font-size:48px; color:#10B981; margin-bottom:16px;"></i><p style="font-weight:700; margin-bottom:20px;">Đã cập nhật Online thành công!</p><button class="btn btn-primary" style="margin:0 auto;" onclick="closeAll()">Tuyệt vời</button></div></div></div>
@@ -105,6 +132,63 @@
         var SUPABASE_KEY = 'sb_publishable__Uc7k0lfdHFzBjWT-3o36w_ydCDXOT8';
         var supabase = null;
         var cards = JSON.parse(localStorage.getItem('lotus_crm_cards') || '[]');
+
+        var ALLOWED_EMAILS = [
+            "nguyenxuanthanh2009@gmail.com"
+        ];
+
+        async function checkAuth() {
+            if (!supabase) supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            const { data: { session }, error } = await supabase.auth.getSession();
+            if (session && session.user) {
+                const user = session.user;
+                if (ALLOWED_EMAILS.includes(user.email)) {
+                    document.getElementById('login-overlay').style.display = 'none';
+                    document.getElementById('main-app').style.display = 'block';
+                    renderBoard();
+                    loadInitialData();
+                } else {
+                    document.getElementById('login-err').innerText = `Email ${user.email} không có quyền truy cập hệ thống!`;
+                    document.getElementById('login-err').style.display = 'block';
+                    await supabase.auth.signOut();
+                }
+            } else {
+                document.getElementById('login-overlay').style.display = 'flex';
+                document.getElementById('main-app').style.display = 'none';
+            }
+        }
+
+        async function handleGoogleLogin() {
+            if (!supabase) supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: window.location.origin + window.location.pathname
+                }
+            });
+            if (error) {
+                document.getElementById('login-err').innerText = 'Lỗi đăng nhập: ' + error.message;
+                document.getElementById('login-err').style.display = 'block';
+            }
+        }
+
+        async function logout() {
+            if (!supabase) supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            await supabase.auth.signOut();
+            location.reload();
+        }
+
+        function loadInitialData() {
+            if (!supabase) supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            supabase.from('orders').select('*').order('created_at', { ascending: false }).then(function(res) {
+                if (res.data && res.data.length > 0) {
+                    cards = res.data.map(function(d) {
+                        return { id: d.id, customerName: d.customerName, amount: parseInt(d.amount) || 0, products: d.products, status: d.status, date: d.created_at };
+                    });
+                    renderBoard();
+                }
+            });
+        }
 
         function closeAll() { var ms = document.querySelectorAll('.modal-overlay'); for(var i=0; i<ms.length; i++) ms[i].classList.remove('active'); }
         function openSettings() { document.getElementById('apiKeyInput').value = localStorage.getItem('lotus_gemini_key') || ''; document.getElementById('settings-modal').classList.add('active'); }
@@ -260,8 +344,23 @@
             document.getElementById('dashboard-modal').classList.add('active'); 
         }
 
-        renderBoard();
-        setTimeout(function() { if (window.supabase && cards.length === 0) { supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); supabase.from('orders').select('*').order('created_at', { ascending: false }).then(function(res) { if (res.data && res.data.length > 0) { cards = res.data.map(function(d) { return { id: d.id, customerName: d.customerName, amount: parseInt(d.amount) || 0, products: d.products, status: d.status, date: d.created_at }; }); renderBoard(); } }); } }, 500);
+        // Bắt đầu lắng nghe auth thay đổi
+        setTimeout(function() {
+            if (window.supabase) {
+                if (!supabase) supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                
+                supabase.auth.onAuthStateChange(function(event, session) {
+                    if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+                        checkAuth();
+                    } else if (event === 'SIGNED_OUT') {
+                        document.getElementById('login-overlay').style.display = 'flex';
+                        document.getElementById('main-app').style.display = 'none';
+                    }
+                });
+
+                document.getElementById('google-login-btn').onclick = handleGoogleLogin;
+            }
+        }, 300);
     </script>
 </body>
 </html>
